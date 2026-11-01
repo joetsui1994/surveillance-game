@@ -1,0 +1,20 @@
+{
+  "name": "surveillance-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bench": "node --disable-warning=ExperimentalWarning scripts/bench.ts",
+    "data:presets": "uv run --project offline python offline/build_presets.py",
+    "data:calibrate": "node --disable-warning=ExperimentalWarning scripts/calibrate-prior.ts --write",
+    "data:bots": "node --disable-warning=ExperimentalWarning scripts/build-bots.ts",
+    "data": "npm run data:presets && npm run data:calibrate && npm run data:bots",
+    "validate": "node --disable-warning=ExperimentalWarning scripts/export-scenarios.ts && uv run --project offline python offline/validate_surrogate.py"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
+  }
+}

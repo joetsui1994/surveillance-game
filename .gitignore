@@ -5,3 +5,5 @@ dist/
 .superpowers/
 __pycache__/
 *.ipynb_checkpoints
+offline/out/
+offline/.venv/
