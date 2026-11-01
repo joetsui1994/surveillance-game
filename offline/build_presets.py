@@ -76,7 +76,7 @@ def build(out_path, game_outbreaks, calib_outbreaks, seed):
             "edges": sorted([min(a, b), max(a, b)] for a, b in g.edges),
             "layout": layout,
             "communities": communities,
-            "defaultBudget": round(0.2 * n),
+            "defaultBudget": round(0.1 * n),
             "maxBudget": round(0.3 * n),
             "prior": DEFAULT_PRIOR,
             "outbreaks": simulate_outbreaks(g, sim_params, game_outbreaks + calib_outbreaks, game_outbreaks, seed + i),
