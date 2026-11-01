@@ -53,15 +53,13 @@ Goal: build intuition for exploration vs exploitation, graph structure, and why 
 
 A latent Gaussian graph model fitted with a **Laplace approximation**:
 
-- Prior: `f ~ N(0, Q⁻¹)`, where `Q` comes from the graph. There is a common interface with two implementations:
-  - **CAR** (default): `Q = τ(D − αA)`, as in the paper's `StaticCAR`.
-  - **Graph diffusion kernel**, as an alternative.
+- Prior: the paper's structure `f = b0 + car`, i.e. covariance `K = b0Var·I + (τ(D − αA))⁻¹`, computed once per graph. Other priors (e.g. a graph diffusion kernel) can be swapped in later because only `K` is consumed; none is planned for now.
 - Likelihood: `y_i ~ Bernoulli(σ(f_i))` for observed nodes.
 - Fit: Newton iterations on `(Q + W)` with step-halving if a step fails to improve the objective, and diagonal jitter if Cholesky fails. Marginal variances come from `diag((Q+W)⁻¹)`.
 - Predictive probability: probit approximation `p ≈ σ(μ / √(1 + πs²/8))`.
-- Hyperparameters: fixed (α, τ) by default. Optionally, average over a small (α, τ) grid weighted by marginal likelihood.
+- Hyperparameters: fixed per preset, **calibrated offline** by grid search over (α, τ, b0Var) on held-out simulated outbreaks. For the 10×10 grid: α = 0.9, τ = 0.03, b0Var = 0.1. The paper's priors (τ ~ LogNormal(0, 0.1)) imply much weaker spatial correlation on this grid.
 - Interface: `fit(graph, observations) → { mean, variance, p }`.
-- Expected cost: ~1 ms per fit at 50 nodes (to be confirmed by the benchmark spike).
+- Measured cost: ~0.1–0.2 ms per fit (≤ 30 observations) on 100–160 nodes. Only the m observed nodes enter the Newton iterations.
 - Probabilities are clamped to `[1e-6, 1 − 1e-6]` before computing entropies.
 
 ### Policies (`core/policies`)
@@ -134,18 +132,18 @@ The presenter chooses which metric ranks the board for each round.
 
 ## 5. Presets & visuals
 
-Planned presets:
+The first preset is a **10×10 grid** (100 nodes, node id = row·10 + col), chosen for interpretability. Later presets are added to the builder's registry:
 
-| Preset | Size |
-|---|---|
-| 6×6 lattice | 36 nodes |
-| Barabási–Albert | ~40 nodes |
-| SBM, high modularity | ~45 nodes, 3 communities |
-| SBM, low modularity | ~45 nodes |
+| Preset | Size | Status |
+|---|---|---|
+| 10×10 grid | 100 nodes | first, in Plan 1 |
+| Barabási–Albert | ~40 nodes | later |
+| SBM, high modularity | ~45 nodes, 3 communities | later |
+| SBM, low modularity | ~45 nodes | later |
 
-- Layouts are hand-curated, fixed and precomputed (few edge crossings, no live physics), with 20–50 nodes per graph.
+- Layouts are hand-curated, fixed and precomputed (few edge crossings, no live physics). The grid uses its own coordinates. Non-grid graphs have 20–50 nodes.
 - Outbreaks are simulated with the repo's `simulate_binary_outbreak` and curated for 25–50% prevalence and an interesting spatial pattern.
-- Each preset ships with several outbreaks and one or more designated seed nodes.
+- Each preset ships with 10 `game` outbreaks (each with a seed node) and 20 `calib` outbreaks used only for prior calibration.
 
 ## 6. Data & sync (Supabase)
 
@@ -178,7 +176,7 @@ Planned presets:
   - Laplace posterior vs brute-force numerical integration on a 3-node graph;
   - policy picks vs the repo's Python policies on fixed inputs;
   - metrics vs sklearn reference values.
-- **Validation notebook:** the browser surrogate vs NumPyro MCMC on each preset. It compares `p`, whether the policies pick the same nodes, and the order bots finish in, and it doubles as a talk slide.
+- **Validation script** (`offline/validate_surrogate.py`): the browser surrogate vs NumPyro MCMC under (a) the same fixed priors and (b) the paper's priors. It reports MAE, r, NE/LE top-5 agreement and LE rank correlation, plus a scatter plot for the talk.
 - **Load test:** 30 simulated concurrent players submitting plays.
 - **Dress rehearsal:** 2–3 colleagues play a full led round on laptops.
 
