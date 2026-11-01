@@ -27,9 +27,13 @@ const B = 204;
 
 /** AUC against number of tests, y fixed to [0.5, 1]. Legend above, direct labels right, hover crosshair. */
 export function AucChart({ series, band }: AucChartProps) {
-  const N = Math.max(...series.map((s) => s.values.length)) - 1;
+  const N = Math.max(1, Math.max(...series.map((s) => s.values.length)) - 1);
+  // Axis starts at 0.5 (chance) unless some value is lower; then it extends down in steps of 0.1.
+  const all = [...series.flatMap((s) => s.values), ...(band?.lo ?? [])].filter((v): v is number => v !== null);
+  const yMin = Math.min(0.5, Math.floor(Math.min(...all, 0.5) * 10) / 10);
+  const gridValues = Array.from({ length: Math.round((1 - yMin) * 10) + 1 }, (_, k) => +(yMin + k / 10).toFixed(1));
   const X = (t: number) => L + (t / N) * (R - L);
-  const Y = (v: number) => B - ((Math.min(Math.max(v, 0.5), 1) - 0.5) / 0.5) * (B - T);
+  const Y = (v: number) => B - ((Math.min(Math.max(v, yMin), 1) - yMin) / (1 - yMin)) * (B - T);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverT, setHoverT] = useState<number | null>(null);
 
@@ -68,9 +72,9 @@ export function AucChart({ series, band }: AucChartProps) {
       </div>
       <div className="chart-plot">
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%">
-          {[0.5, 0.6, 0.7, 0.8, 0.9, 1].map((v) => (
+          {gridValues.map((v) => (
             <g key={v}>
-              <line x1={L} x2={R} y1={Y(v)} y2={Y(v)} stroke={v === 0.5 ? '#c9c7c1' : '#eceae6'} />
+              <line x1={L} x2={R} y1={Y(v)} y2={Y(v)} stroke={v === yMin ? '#c9c7c1' : '#eceae6'} />
               <text x={L - 6} y={Y(v) + 4} fontSize={11} textAnchor="end" fill="#52514e">{v.toFixed(1)}</text>
             </g>
           ))}

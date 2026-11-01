@@ -81,6 +81,39 @@ describe('App', () => {
     expect((await screen.findByTestId('tests-left')).textContent).toBe('9 / 10');
   });
 
+  it('discards a stored session that no longer matches the data, instead of crashing', async () => {
+    const preset = JSON.parse(files['presets.json']).presets[0];
+    const ob = preset.outbreaks[0];
+    const stale = { presetId: preset.id, outbreakId: ob.id, budget: 10, seedNode: (ob.seedNode + 1) % preset.n, picks: [], usedPredictions: false, usedUncertainty: false };
+    localStorage.setItem('sg.session', JSON.stringify(stale));
+    render(<App />);
+    expect(await screen.findByPlaceholderText('e.g. ada')).toBeTruthy();
+  });
+
+  it('hover box only reveals what the switched-on overlays show', async () => {
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText('e.g. ada'), { target: { value: 'ada' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    const node = screen.getAllByTestId(/^node-/).find((el) => el.getAttribute('data-fill') === '#e8e8e8')!;
+    fireEvent.mouseEnter(node);
+    const box = screen.getByTestId('hover-box');
+    expect(box.textContent).not.toMatch(/P\(infected\)/);
+    fireEvent.click(screen.getByLabelText(/Predictions/));
+    expect(box.textContent).toMatch(/P\(infected\) ≈ \d\.\d\d/);
+    expect(box.textContent).not.toMatch(/±|rank/);
+    fireEvent.click(screen.getByLabelText(/Uncertainty/));
+    expect(box.textContent).toMatch(/±/);
+    expect(box.textContent).toMatch(/Uncertainty rank/);
+  });
+
+  it('starts the game when Enter is pressed in the nickname field', async () => {
+    render(<App />);
+    const input = await screen.findByPlaceholderText('e.g. ada');
+    fireEvent.change(input, { target: { value: 'ada' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByTestId('tests-left')).toBeTruthy();
+  });
+
   it('shows an error if the data cannot be loaded', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })));
     render(<App />);

@@ -38,7 +38,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
 /* Play */
 .play-body, .results-body { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; align-items: flex-start; }
-.graph { flex: 1 1 420px; max-width: 640px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.graph { flex: 1 1 420px; max-width: min(640px, calc(100vh - 110px)); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 .side { flex: 1 1 260px; max-width: 340px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
 .panel p { margin: 4px 0; line-height: 1.4; }

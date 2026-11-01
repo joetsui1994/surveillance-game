@@ -13,7 +13,13 @@ export function StartScreen({ presets, initialNickname, onStart }: StartScreenPr
   const preset = presets.find((p) => p.id === presetId);
   const name = nickname.trim();
   return (
-    <main className="start">
+    <form
+      className="start"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (name !== '' && preset) onStart(name, presetId);
+      }}
+    >
       <h1>Surveillance Game</h1>
       <p className="lead">
         An outbreak is spreading across a network of locations. You have <b>{preset?.defaultBudget ?? 'a few'} tests</b>. One
@@ -26,15 +32,15 @@ export function StartScreen({ presets, initialNickname, onStart }: StartScreenPr
       </label>
       <div className="presets" role="radiogroup" aria-label="Network">
         {presets.map((p) => (
-          <button key={p.id} role="radio" aria-checked={p.id === presetId} className={`preset-card${p.id === presetId ? ' selected' : ''}`} onClick={() => setPresetId(p.id)}>
+          <button key={p.id} type="button" role="radio" aria-checked={p.id === presetId} className={`preset-card${p.id === presetId ? ' selected' : ''}`} onClick={() => setPresetId(p.id)}>
             <b>{p.name}</b>
             <span className="muted">{p.n} locations · {p.defaultBudget} tests</span>
           </button>
         ))}
       </div>
-      <button className="primary" disabled={name === '' || !preset} onClick={() => onStart(name, presetId)}>
+      <button type="submit" className="primary" disabled={name === '' || !preset}>
         Play
       </button>
-    </main>
+    </form>
   );
 }

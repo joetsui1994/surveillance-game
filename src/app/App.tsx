@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { presetModel, type PresetModel } from '../core/presets.ts';
 import { chooseOutbreak, loadGameData, type GameData } from './data.ts';
-import { isFinished, startSession, type Session } from './session.ts';
+import { isFinished, isValidFor, startSession, type Session } from './session.ts';
 import { loadLastOutbreak, loadNickname, loadSession, saveLastOutbreak, saveNickname, saveSession } from './storage.ts';
 import { PlayScreen } from './screens/PlayScreen.tsx';
 import { ResultsScreen } from './screens/ResultsScreen.tsx';
@@ -29,6 +29,14 @@ export function App() {
     };
   }, [data]);
 
+  // Drop a stored session that no longer fits the data (e.g. presets regenerated since it was saved).
+  useEffect(() => {
+    if (!data || !session) return;
+    const m = model(session.presetId);
+    const ob = m?.preset.outbreaks.find((o) => o.id === session.outbreakId);
+    if (!m || !ob || !isValidFor(session, m.preset, ob)) setSession(null);
+  }, [data, session, model]);
+
   if (error) return <main className="message">Could not load the game: {error}</main>;
   if (!data) return <main className="message">Loading…</main>;
 
@@ -41,7 +49,7 @@ export function App() {
 
   const current = session && model(session.presetId);
   const outbreak = current?.preset.outbreaks.find((o) => o.id === session?.outbreakId);
-  if (!session || !current || !outbreak) {
+  if (!session || !current || !outbreak || !isValidFor(session, current.preset, outbreak)) {
     return (
       <StartScreen
         presets={data.presets.presets}
@@ -55,7 +63,7 @@ export function App() {
     );
   }
   if (!isFinished(session)) {
-    return <PlayScreen model={current} outbreak={outbreak} session={session} nickname={nickname} onSessionChange={(update) => setSession((s) => (s ? update(s) : s))} />;
+    return <PlayScreen key={`${session.presetId}/${session.outbreakId}`} model={current} outbreak={outbreak} session={session} nickname={nickname} onSessionChange={(update) => setSession((s) => (s ? update(s) : s))} />;
   }
   return (
     <ResultsScreen

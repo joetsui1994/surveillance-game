@@ -59,4 +59,18 @@ describe('probabilityStd', () => {
     }
     expect(probabilityStd(mu, v)).toBeCloseTo(Math.sqrt(m2 - m1 * m1), 3);
   });
+
+  it('stays accurate (2 dp, as displayed) at the large variances seen early in a game', () => {
+    const rng = makeRng(99);
+    const [mu, v, S] = [0.2, 11, 200_000];
+    let m1 = 0;
+    let m2 = 0;
+    for (let s = 0; s < S; s++) {
+      const z = Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng());
+      const p = 1 / (1 + Math.exp(-(mu + Math.sqrt(v) * z)));
+      m1 += p / S;
+      m2 += (p * p) / S;
+    }
+    expect(probabilityStd(mu, v)).toBeCloseTo(Math.sqrt(m2 - m1 * m1), 2);
+  });
 });

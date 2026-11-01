@@ -4,7 +4,7 @@ import { parsePresetFile, presetModel } from '../core/presets.ts';
 import { replay } from '../core/replay.ts';
 import { scenarioFor } from '../core/presets.ts';
 import {
-  deserializeSession, isFinished, isTested, noteToggles, observations, pick, scoreSession,
+  deserializeSession, isFinished, isTested, isValidFor, noteToggles, observations, pick, scoreSession,
   serializeSession, startSession, testsLeft,
 } from './session.ts';
 
@@ -76,5 +76,24 @@ describe('session', () => {
     expect(deserializeSession(null)).toBeNull();
     expect(deserializeSession('not json')).toBeNull();
     expect(deserializeSession(JSON.stringify({ ...s, picks: 'x' }))).toBeNull();
+  });
+});
+
+describe('isValidFor', () => {
+  const s = pick(startSession(preset, outbreak, 3), freeNode([outbreak.seedNode]), preset.n);
+  const other = preset.outbreaks.find((o) => o.split === 'game' && o.id !== outbreak.id && o.seedNode !== outbreak.seedNode)!;
+
+  it('accepts a session that matches the current data', () => {
+    expect(isValidFor(s, preset, outbreak)).toBe(true);
+  });
+
+  it('rejects stale or corrupt sessions (data regenerated, edited storage)', () => {
+    expect(isValidFor(s, preset, other)).toBe(false); // different outbreak
+    expect(isValidFor({ ...s, seedNode: (outbreak.seedNode + 1) % preset.n }, preset, outbreak)).toBe(false);
+    expect(isValidFor({ ...s, picks: [preset.n] }, preset, outbreak)).toBe(false);
+    expect(isValidFor({ ...s, picks: [s.picks[0], s.picks[0]] }, preset, outbreak)).toBe(false);
+    expect(isValidFor({ ...s, picks: [outbreak.seedNode] }, preset, outbreak)).toBe(false);
+    expect(isValidFor({ ...s, budget: 0, picks: [] }, preset, outbreak)).toBe(false);
+    expect(isValidFor({ ...s, budget: preset.maxBudget + 1 }, preset, outbreak)).toBe(false);
   });
 });

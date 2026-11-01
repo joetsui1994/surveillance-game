@@ -5,6 +5,7 @@ import { AucChart, type ChartSeries } from '../components/AucChart.tsx';
 import { GraphView } from '../components/GraphView.tsx';
 import { botResult } from '../data.ts';
 import { scoreSession, type Session } from '../session.ts';
+import { verdictText } from '../verdict.ts';
 
 export interface ResultsScreenProps {
   model: PresetModel;
@@ -46,14 +47,11 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
     { key: 'you', name: 'You', short: 'You', values: score.trajectory.auc, ...SERIES_STYLE.you },
   ];
 
-  const finals = [
-    { name: 'LE', v: le[session.budget] },
-    { name: 'NE', v: ne[session.budget] },
-    { name: 'Random', v: rand.mean[session.budget] },
-  ].filter((b): b is { name: string; v: number } => b.v !== null);
-  const above = score.auc === null ? [] : finals.filter((b) => score.auc! > b.v);
-  const below = score.auc === null ? [] : finals.filter((b) => score.auc! <= b.v);
-  const list = (bs: typeof finals) => bs.map((b) => `${b.name} (${b.v.toFixed(3)})`).join(', ');
+  const verdict = verdictText(score.auc, [
+    { name: 'LE', auc: le[session.budget] ?? null },
+    { name: 'NE', auc: ne[session.budget] ?? null },
+    { name: 'Random', auc: rand.mean[session.budget] ?? null },
+  ]);
 
   return (
     <main className="results">
@@ -74,6 +72,7 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
             <div>
               <div className="label">Learning-curve AUC</div>
               <div className="secondary">{fmt(score.aucArea)}</div>
+              <div className="muted small">mean AUC over tests 1–{session.budget}</div>
             </div>
             <div>
               <div className="label">Accuracy</div>
@@ -81,11 +80,7 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
             </div>
           </div>
           <AucChart series={series} band={{ lo: rand.lo.slice(0, upTo), hi: rand.hi.slice(0, upTo), color: SERIES_STYLE.rand.color }} />
-          <p className="verdict" data-testid="verdict">
-            {score.auc === null
-              ? 'AUC is undefined for this game (all untested locations had the same status).'
-              : <>On this outbreak you finished {above.length > 0 && <>above <b>{list(above)}</b></>}{above.length > 0 && below.length > 0 && ' and '}{below.length > 0 && <>below <b>{list(below)}</b></>}.</>}
-          </p>
+          <p className="verdict" data-testid="verdict">{verdict}</p>
           <div className="actions">
             <button className="primary" onClick={onPlayAgain}>Play another outbreak</button>
             <button onClick={onChangeSettings}>Change network or nickname</button>

@@ -38,11 +38,15 @@ export function SidePanel(props: SidePanelProps) {
         {result !== undefined ? (
           <>Tested: {result === 1 ? 'infected' : 'clear'}</>
         ) : (
-          <>
-            P(infected) ≈ {p[hovered].toFixed(2)} ± {pStd[hovered].toFixed(2)}
-            <br />
-            Uncertainty rank {rank.get(hovered)} of {rank.size}
-          </>
+          // Reveal only what the switched-on overlays show, so the toggles mean something.
+          showPredictions ? (
+            <>
+              P(infected) ≈ {p[hovered].toFixed(2)}
+              {showUncertainty && <> ± {pStd[hovered].toFixed(2)}<br />Uncertainty rank {rank.get(hovered)} of {rank.size}</>}
+            </>
+          ) : (
+            <span className="muted">Untested. Switch on Predictions to see the model's guess.</span>
+          )
         )}
         <br />
         <span className="muted">1-hop: {h1} · 2-hop: {h2} · 3-hop: {h3}</span>

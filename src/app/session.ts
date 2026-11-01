@@ -70,6 +70,18 @@ export function scoreSession(model: PresetModel, outbreak: Outbreak, s: Session)
   };
 }
 
+/** Is a (stored) session still consistent with the current data? Regenerated presets can change seeds. */
+export function isValidFor(s: Session, preset: Preset, outbreak: Outbreak): boolean {
+  if (s.presetId !== preset.id || s.outbreakId !== outbreak.id || s.seedNode !== outbreak.seedNode) return false;
+  if (!(s.budget >= 1 && s.budget <= preset.maxBudget && s.picks.length <= s.budget)) return false;
+  const seen = new Set([s.seedNode]);
+  for (const node of s.picks) {
+    if (!(Number.isInteger(node) && node >= 0 && node < preset.n) || seen.has(node)) return false;
+    seen.add(node);
+  }
+  return true;
+}
+
 export function serializeSession(s: Session): string {
   return JSON.stringify(s);
 }
