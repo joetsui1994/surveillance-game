@@ -14,7 +14,7 @@ const out: BotsFile = { version: 1, presets: {} };
 for (const preset of loadPresets().presets) {
   const model = presetModel(preset);
   out.presets[preset.id] = {};
-  const finals: Record<string, number[]> = {};
+  const finals: Record<string, { auc: number[]; acc: number[] }> = {};
   for (const ob of preset.outbreaks.filter((o) => o.split === 'game')) {
     const sc = scenarioFor(model, ob);
     const results: BotResult[] = [];
@@ -23,13 +23,16 @@ for (const preset of loadPresets().presets) {
       for (let r = 0; r < runs; r++) trajectories.push(runPolicy(sc, policy, preset.maxBudget, makeRng(r)));
       const res = summarise(policy, trajectories);
       results.push(res);
-      (finals[policy] ??= []).push(res.accuracy.mean[preset.defaultBudget] as number);
+      const f = (finals[policy] ??= { auc: [], acc: [] });
+      const aucAtBudget = res.auc.mean[preset.defaultBudget];
+      if (aucAtBudget !== null) f.auc.push(aucAtBudget);
+      f.acc.push(res.accuracy.mean[preset.defaultBudget] as number);
     }
     out.presets[preset.id][ob.id] = results;
   }
-  console.log(`\n${preset.id}: mean accuracy after ${preset.defaultBudget} tests (game outbreaks)`);
-  for (const [policy, vals] of Object.entries(finals))
-    console.log(`  ${policy.padEnd(5)} ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(3)}`);
+  const mean = (v: number[]) => (v.reduce((a, b) => a + b, 0) / v.length).toFixed(3);
+  console.log(`\n${preset.id}: mean AUC (accuracy) after ${preset.defaultBudget} tests (game outbreaks)`);
+  for (const [policy, f] of Object.entries(finals)) console.log(`  ${policy.padEnd(5)} ${mean(f.auc)} (${mean(f.acc)})`);
 }
 writeJson(BOTS_PATH, out);
 console.log(`\nWrote ${BOTS_PATH}`);

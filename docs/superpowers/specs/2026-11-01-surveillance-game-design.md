@@ -57,7 +57,7 @@ A latent Gaussian graph model fitted with a **Laplace approximation**:
 - Likelihood: `y_i ~ Bernoulli(σ(f_i))` for observed nodes.
 - Fit: Newton iterations on `(Q + W)` with step-halving if a step fails to improve the objective, and diagonal jitter if Cholesky fails. Marginal variances come from `diag((Q+W)⁻¹)`.
 - Predictive probability: probit approximation `p ≈ σ(μ / √(1 + πs²/8))`.
-- Hyperparameters: fixed per preset, **calibrated offline** by grid search over (α, τ, b0Var) on held-out simulated outbreaks. For the 10×10 grid: α = 0.9, τ = 0.03, b0Var = 0.1. The paper's priors (τ ~ LogNormal(0, 0.1)) imply much weaker spatial correlation on this grid.
+- Hyperparameters: fixed per preset, **calibrated offline** by grid search over (α, τ, b0Var) on held-out simulated outbreaks. The objective is learning-curve AUC. For the 10×10 grid: α = 0.95, τ = 0.03, b0Var = 0.01 (b0Var barely matters). The paper's priors (τ ~ LogNormal(0, 0.1)) imply much weaker spatial correlation on this grid.
 - Interface: `fit(graph, observations) → { mean, variance, p }`.
 - Measured cost: ~0.1–0.2 ms per fit (≤ 30 observations) on 100–160 nodes. Only the m observed nodes enter the Newton iterations.
 - Probabilities are clamped to `[1e-6, 1 − 1e-6]` before computing entropies.
@@ -106,13 +106,13 @@ Free play is available whenever no led round is open. The player picks any prese
 
 ### Scoring
 
-All metrics are computed on **unobserved nodes only**, using the model's `p`:
+All metrics are computed on **unobserved nodes only**, using the model's `p`. **The primary metric is ROC-AUC, as in the paper** (posterior P(infected) vs true status):
 
-- **Accuracy:** threshold 0.5, after the final test.
-- **AUC (ROC):** after the final test. `null` if the unobserved nodes are all one class. Ranking then falls back to accuracy.
-- **Learning-curve area:** mean of per-step accuracy over steps 1…B.
+- **AUC (default ranking):** after the final test. `null` if the unobserved nodes are all one class (rare at 25–50% prevalence). Such plays are ranked last for that metric.
+- **Learning-curve AUC:** mean AUC over steps 1…B (undefined steps skipped). This mirrors the paper's AUC-vs-r curves.
+- **Accuracy (secondary display only):** threshold 0.5. It is shown because it is intuitive, but it is not the default ranking. It penalises sampling bias: players who only test next to known infections get maps that over-predict infection (RI bot: AUC 0.92 but accuracy 0.61 after 20 tests). This is a teaching point about reactive testing.
 
-The presenter chooses which metric ranks the board for each round.
+The presenter can switch the ranking metric per round, but AUC is the default. Prior calibration, bot summaries and free play's Δ vs LE all use AUC.
 
 ### Bots
 

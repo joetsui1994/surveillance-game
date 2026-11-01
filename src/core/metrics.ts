@@ -16,10 +16,12 @@ export function auc(p: ArrayLike<number>, truth: ArrayLike<number>, nodes: numbe
   return s / (pos.length * neg.length);
 }
 
-/** Learning-curve area: mean of curve[1..] (curve[0] is the seed-only state). */
-export function lcArea(curve: number[]): number {
+/**
+ * Learning-curve area: mean of curve[1..] (curve[0] is the seed-only state). Undefined (null) steps,
+ * e.g. AUC when unobserved nodes are all one class, are skipped; null if no step is defined.
+ */
+export function lcArea(curve: (number | null)[]): number | null {
   if (curve.length < 2) throw new Error('lcArea: need at least one test after the seed');
-  let s = 0;
-  for (let t = 1; t < curve.length; t++) s += curve[t];
-  return s / (curve.length - 1);
+  const defined = curve.slice(1).filter((v): v is number => v !== null);
+  return defined.length > 0 ? defined.reduce((a, b) => a + b, 0) / defined.length : null;
 }

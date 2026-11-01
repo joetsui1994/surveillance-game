@@ -27,4 +27,9 @@ describe('lcArea', () => {
     expect(lcArea([0.5, 0.6, 0.8])).toBeCloseTo(0.7);
     expect(() => lcArea([0.5])).toThrow();
   });
+
+  it('skips undefined (null) AUC steps, and is null if every step is undefined', () => {
+    expect(lcArea([null, 0.6, null, 0.8])).toBeCloseTo(0.7);
+    expect(lcArea([0.9, null, null])).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
 // Grid-search the CAR prior (alpha, tau, b0Var) per preset on its 'calib' outbreaks, maximising the mean
-// learning-curve accuracy of LE and Random. Usage: npm run data:calibrate  (add --write to update presets.json)
+// learning-curve AUC (the paper's metric) of LE and Random. Usage: npm run data:calibrate  (add --write to update presets.json)
 import { makeGraph } from '../src/core/graph.ts';
 import { carCovariance, type PriorParams } from '../src/core/prior.ts';
 import { runPolicy } from '../src/core/replay.ts';
@@ -27,17 +27,19 @@ for (const preset of file.presets) {
     let count = 0;
     for (const ob of calib) {
       const sc = { graph, K, truth: ob.truth, seedNode: ob.seedNode };
-      total += lcArea(runPolicy(sc, 'LE', preset.defaultBudget, makeRng(0)).accuracy);
-      count++;
-      for (let r = 0; r < RANDOM_RUNS; r++) {
-        total += lcArea(runPolicy(sc, 'RAND', preset.defaultBudget, makeRng(r)).accuracy);
+      const runs = [runPolicy(sc, 'LE', preset.defaultBudget, makeRng(0))];
+      for (let r = 0; r < RANDOM_RUNS; r++) runs.push(runPolicy(sc, 'RAND', preset.defaultBudget, makeRng(r)));
+      for (const run of runs) {
+        const area = lcArea(run.auc);
+        if (area === null) continue;
+        total += area;
         count++;
       }
     }
     results.push({ prior, score: total / count });
   }
   results.sort((a, b) => b.score - a.score);
-  console.log(`\n${preset.id} — top 5 of ${results.length} (mean learning-curve accuracy on ${calib.length} calib outbreaks)`);
+  console.log(`\n${preset.id} — top 5 of ${results.length} (mean learning-curve AUC on ${calib.length} calib outbreaks)`);
   for (const r of results.slice(0, 5)) console.log(`  alpha=${r.prior.alpha} tau=${r.prior.tau} b0Var=${r.prior.b0Var}  ${r.score.toFixed(4)}`);
   const best = results[0].prior;
   const edges: [string, number, number[]][] = [['alpha', best.alpha, ALPHAS], ['tau', best.tau, TAUS], ['b0Var', best.b0Var, B0_VARS]];
