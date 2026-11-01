@@ -1,0 +1,14 @@
+[project]
+name = "surveillance-game-offline"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "networkx>=3.2",
+    "numpy>=1.26",
+    "numpyro>=0.15",
+    "jax>=0.4.30",
+    "matplotlib>=3.8",
+]
+
+[tool.uv]
+package = false
