@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baldScore, binaryEntropy } from './entropy.ts';
+import { baldScore, binaryEntropy, probabilityStd } from './entropy.ts';
 import { makeRng } from './rng.ts';
 
 describe('binaryEntropy', () => {
@@ -34,5 +34,29 @@ describe('baldScore', () => {
       expH += binaryEntropy(p) / S;
     }
     expect(baldScore(mu, v)).toBeCloseTo(binaryEntropy(pBar) - expH, 3);
+  });
+});
+
+describe('probabilityStd', () => {
+  it('is zero with no latent uncertainty', () => {
+    expect(probabilityStd(0.3, 0)).toBeCloseTo(0, 12);
+  });
+
+  it('is symmetric in the latent mean', () => {
+    expect(probabilityStd(1.2, 2)).toBeCloseTo(probabilityStd(-1.2, 2), 12);
+  });
+
+  it('agrees with a Monte Carlo estimate', () => {
+    const rng = makeRng(321);
+    const [mu, v, S] = [0.4, 3, 200_000];
+    let m1 = 0;
+    let m2 = 0;
+    for (let s = 0; s < S; s++) {
+      const z = Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng()); // Box–Muller
+      const p = 1 / (1 + Math.exp(-(mu + Math.sqrt(v) * z)));
+      m1 += p / S;
+      m2 += (p * p) / S;
+    }
+    expect(probabilityStd(mu, v)).toBeCloseTo(Math.sqrt(m2 - m1 * m1), 3);
   });
 });

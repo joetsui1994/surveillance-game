@@ -22,3 +22,22 @@ export function baldScore(mean: number, variance: number): number {
   }
   return Math.max(binaryEntropy(pBar / SQRT_PI) - expH / SQRT_PI, 0);
 }
+
+/**
+ * Posterior standard deviation of P(infected) = σ(f) for f ~ N(mean, variance): the width of the
+ * model's belief about P(infected). Shown to players as "uncertainty".
+ */
+export function probabilityStd(mean: number, variance: number): number {
+  if (!(variance > 0)) return 0;
+  const s = Math.sqrt(2 * variance);
+  let m1 = 0;
+  let m2 = 0;
+  for (let k = 0; k < GH_X.length; k++) {
+    const pk = 1 / (1 + Math.exp(-(mean + s * GH_X[k])));
+    m1 += GH_W[k] * pk;
+    m2 += GH_W[k] * pk * pk;
+  }
+  m1 /= SQRT_PI;
+  m2 /= SQRT_PI;
+  return Math.sqrt(Math.max(m2 - m1 * m1, 0));
+}
