@@ -14,6 +14,18 @@ Pure TypeScript, runs in the browser and in Node:
 
 Validation against NumPyro MCMC: `docs/validation/validation.md`.
 
+## App (`src/app/`)
+
+Single-player game: React + hand-written SVG. All model computation runs in the browser; data comes from `public/data/`.
+
+```bash
+npm run dev       # development server
+npm run build     # typecheck + production build into dist/ (static; host anywhere)
+npm run preview   # serve dist/ locally
+```
+
+Design: `docs/superpowers/specs/2026-11-01-player-app-design.md`
+
 ## Commands
 
 | Command | What it does |
