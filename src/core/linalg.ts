@@ -30,7 +30,7 @@ export function choleskyJitter(A: Float64Array, n: number): Float64Array {
       jitter = jitter === 0 ? 1e-10 : jitter * 100;
     }
   }
-  throw new Error('choleskyJitter: failed after jitter 1e0');
+  throw new Error('choleskyJitter: failed even with jitter 1e-2');
 }
 
 /** Solve L x = b for lower-triangular L. */

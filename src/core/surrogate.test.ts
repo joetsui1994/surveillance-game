@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gridEdges, makeGraph } from './graph.ts';
+import { inverseSPD } from './linalg.ts';
 import { carCovariance, DEFAULT_PRIOR } from './prior.ts';
 import { fitLaplace, type Observation } from './surrogate.ts';
 
@@ -57,6 +58,18 @@ describe('fitLaplace', () => {
   it('stays finite with conflicting adjacent observations', () => {
     const post = fitLaplace(K, N, [{ node: 44, y: 1 }, { node: 45, y: 0 }]);
     for (let j = 0; j < N; j++) expect(Number.isFinite(post.p[j])).toBe(true);
+  });
+
+  it('matches the dense posterior variance diag((K⁻¹ + W)⁻¹) with several observations', () => {
+    const obs: Observation[] = [{ node: 0, y: 1 }, { node: 12, y: 1 }, { node: 55, y: 0 }, { node: 99, y: 0 }];
+    const post = fitLaplace(K, N, obs);
+    const P = inverseSPD(K, N);
+    for (const o of obs) {
+      const pi = sigmoid(post.mean[o.node]);
+      P[o.node * N + o.node] += pi * (1 - pi);
+    }
+    const cov = inverseSPD(P, N);
+    for (const j of [0, 1, 13, 44, 55, 98]) expect(post.variance[j]).toBeCloseTo(cov[j * N + j], 6);
   });
 
   it('rejects duplicate observations', () => {

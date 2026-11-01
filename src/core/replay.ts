@@ -32,6 +32,7 @@ export function replay(sc: Scenario, picks: number[]): Trajectory {
   const acc = [e.acc];
   const aucs = [e.auc];
   for (const node of picks) {
+    if (!(Number.isInteger(node) && node >= 0 && node < sc.graph.n)) throw new Error(`replay: node ${node} out of range`);
     if (obs.some((o) => o.node === node)) throw new Error(`replay: node ${node} already observed`);
     obs.push({ node, y: sc.truth[node] });
     e = evaluate(sc, obs);

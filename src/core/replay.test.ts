@@ -41,4 +41,9 @@ describe('replay', () => {
     expect(() => replay(sc, [55])).toThrow(/already observed/);
     expect(() => replay(sc, [1, 1])).toThrow(/already observed/);
   });
+
+  it('rejects out-of-range picks', () => {
+    expect(() => replay(sc, [100])).toThrow(/out of range/);
+    expect(() => replay(sc, [-1])).toThrow(/out of range/);
+  });
 });

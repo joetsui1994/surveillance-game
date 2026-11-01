@@ -6,8 +6,9 @@ import { summarise, type BotResult, type BotsFile } from '../src/core/bots.ts';
 import type { PolicyName } from '../src/core/policies.ts';
 import { BOTS_PATH, loadPresets, writeJson } from './io.ts';
 
-/** Deterministic policies run once (seeded tie-breaking); stochastic ones are averaged. */
-const RUNS: Record<PolicyName, number> = { LE: 1, NE: 1, BALD: 1, DC: 1, RI: 200, RAND: 200 };
+/** Model-driven policies run once (ties are rare after the first few steps); policies that are random
+ *  among many equal candidates (DC on a grid: all interior nodes have degree 4) are averaged. */
+const RUNS: Record<PolicyName, number> = { LE: 1, NE: 1, BALD: 1, DC: 200, RI: 200, RAND: 200 };
 
 const out: BotsFile = { version: 1, presets: {} };
 for (const preset of loadPresets().presets) {

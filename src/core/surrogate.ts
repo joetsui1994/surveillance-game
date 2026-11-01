@@ -82,6 +82,8 @@ export function fitLaplace(K: Float64Array, n: number, obs: Observation[], maxIt
       fNew = matvec(aNew);
       objNew = objective(aNew, fNew);
     }
+    // No improving step even after halving: the current f is the numerical optimum.
+    if (objNew < obj) break;
     const converged = Math.abs(objNew - obj) < tol;
     a = aNew;
     f = fNew;
