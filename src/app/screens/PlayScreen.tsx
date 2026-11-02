@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { probabilityStd } from '../../core/entropy.ts';
 import type { Outbreak, PresetModel } from '../../core/presets.ts';
 import { fitLaplace } from '../../core/surrogate.ts';
@@ -14,9 +14,13 @@ export interface PlayScreenProps {
   nickname: string;
   /** Receives an updater, so several clicks before a re-render are all applied in order. */
   onSessionChange: (update: (s: Session) => Session) => void;
+  /** Header title, e.g. "Round 2"; defaults to the game name. */
+  title?: string;
+  /** Shown under the header, e.g. "Round 2 has started". */
+  banner?: ReactNode;
 }
 
-export function PlayScreen({ model, outbreak, session, nickname, onSessionChange }: PlayScreenProps) {
+export function PlayScreen({ model, outbreak, session, nickname, onSessionChange, title = 'Surveillance Game', banner }: PlayScreenProps) {
   const { preset, graph, K } = model;
   const [showPredictions, setShowPredictions] = useState(false);
   const [showUncertainty, setShowUncertainty] = useState(false);
@@ -48,7 +52,7 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
     <main className="play">
       <header className="bar">
         <div>
-          <b>Surveillance Game</b> · {preset.name} · outbreak {outbreak.id} · <i>{nickname}</i>
+          <b>{title}</b> · {preset.name} · outbreak {outbreak.id} · <i>{nickname}</i>
         </div>
         <div aria-label="tests left">
           Tests left:{' '}
@@ -60,6 +64,7 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
           <b data-testid="tests-left">{left} / {session.budget}</b>
         </div>
       </header>
+      {banner}
       <div className="play-body">
         <GraphView
           graph={graph}

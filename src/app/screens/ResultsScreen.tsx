@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { BotsFile } from '../../core/bots.ts';
 import type { Outbreak, PresetModel } from '../../core/presets.ts';
 import { AucChart, type ChartSeries } from '../components/AucChart.tsx';
@@ -12,8 +12,15 @@ export interface ResultsScreenProps {
   outbreak: Outbreak;
   session: Session;
   bots: BotsFile;
-  onPlayAgain: () => void;
-  onChangeSettings: () => void;
+  /** Header title; defaults to "Results". */
+  title?: string;
+  /** Compare with the bots (chart lines and verdict). Off while a round is still open. */
+  showComparison?: boolean;
+  /** Shown above the scores, e.g. the player's rank or "waiting for the presenter". */
+  notice?: ReactNode;
+  /** Optional banner under the header. */
+  banner?: ReactNode;
+  actions: ReactNode;
 }
 
 // Validated categorical pair for the bots (dataviz palette check: CVD, normal vision, contrast);
@@ -27,7 +34,7 @@ const SERIES_STYLE = {
 
 const fmt = (v: number | null) => (v === null ? '–' : v.toFixed(3));
 
-export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onChangeSettings }: ResultsScreenProps) {
+export function ResultsScreen({ model, outbreak, session, bots, title = 'Results', showComparison = true, notice, banner, actions }: ResultsScreenProps) {
   const { preset, graph } = model;
   const [hovered, setHovered] = useState<number | null>(null);
   const score = useMemo(() => scoreSession(model, outbreak, session), [model, outbreak, session]);
@@ -40,12 +47,15 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
   const le = botResult(bots, preset.id, outbreak.id, 'LE').auc.mean.slice(0, upTo);
   const ne = botResult(bots, preset.id, outbreak.id, 'NE').auc.mean.slice(0, upTo);
   const rand = botResult(bots, preset.id, outbreak.id, 'RAND').auc;
-  const series: ChartSeries[] = [
-    { key: 'rand', name: 'Random (mean, 90% band)', short: 'Random', values: rand.mean.slice(0, upTo), ...SERIES_STYLE.rand },
-    { key: 'ne', name: 'NE', short: 'NE', values: ne, ...SERIES_STYLE.ne },
-    { key: 'le', name: 'LE (paper)', short: 'LE', values: le, ...SERIES_STYLE.le },
-    { key: 'you', name: 'You', short: 'You', values: score.trajectory.auc, ...SERIES_STYLE.you },
-  ];
+  const you: ChartSeries = { key: 'you', name: 'You', short: 'You', values: score.trajectory.auc, ...SERIES_STYLE.you };
+  const series: ChartSeries[] = showComparison
+    ? [
+        { key: 'rand', name: 'Random (mean, 90% band)', short: 'Random', values: rand.mean.slice(0, upTo), ...SERIES_STYLE.rand },
+        { key: 'ne', name: 'NE', short: 'NE', values: ne, ...SERIES_STYLE.ne },
+        { key: 'le', name: 'LE (paper)', short: 'LE', values: le, ...SERIES_STYLE.le },
+        you,
+      ]
+    : [you];
 
   const verdict = verdictText(score.auc, [
     { name: 'LE', auc: le[session.budget] ?? null },
@@ -56,14 +66,16 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
   return (
     <main className="results">
       <header className="bar">
-        <div><b>Results</b> · {preset.name} · outbreak {outbreak.id}</div>
+        <div><b>{title}</b> · {preset.name} · outbreak {outbreak.id}</div>
       </header>
+      {banner}
       <div className="results-body">
         <div className="results-map">
           <GraphView graph={graph} layout={preset.layout} tested={tested} predictions={null} uncertainty={null} truth={outbreak.truth} wrong={wrong} hovered={hovered} onHover={setHovered} />
           <p className="muted small">Fill = <b>true</b> status · <b>+/−</b> your tests · <b>✕</b> = model's final guess was wrong</p>
         </div>
         <div className="results-side">
+          {notice}
           <div className="scores">
             <div>
               <div className="label">AUC (paper metric)</div>
@@ -79,12 +91,9 @@ export function ResultsScreen({ model, outbreak, session, bots, onPlayAgain, onC
               <div className="tertiary">{(100 * score.accuracy).toFixed(0)}%</div>
             </div>
           </div>
-          <AucChart series={series} band={{ lo: rand.lo.slice(0, upTo), hi: rand.hi.slice(0, upTo), color: SERIES_STYLE.rand.color }} />
-          <p className="verdict" data-testid="verdict">{verdict}</p>
-          <div className="actions">
-            <button className="primary" onClick={onPlayAgain}>Play another outbreak</button>
-            <button onClick={onChangeSettings}>Change network or nickname</button>
-          </div>
+          <AucChart series={series} band={showComparison ? { lo: rand.lo.slice(0, upTo), hi: rand.hi.slice(0, upTo), color: SERIES_STYLE.rand.color } : undefined} />
+          {showComparison && <p className="verdict" data-testid="verdict">{verdict}</p>}
+          <div className="actions">{actions}</div>
         </div>
       </div>
     </main>

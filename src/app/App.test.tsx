@@ -1,35 +1,17 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { files, playToEnd, stubData } from '../test/harness.ts';
 import { App } from './App.tsx';
-
-const files: Record<string, string> = {
-  'presets.json': readFileSync('public/data/presets.json', 'utf8'),
-  'bots.json': readFileSync('public/data/bots.json', 'utf8'),
-};
 
 beforeEach(() => {
   localStorage.clear();
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    const body = files[url.split('/').pop()!];
-    return { ok: body !== undefined, status: body ? 200 : 404, json: async () => JSON.parse(body) };
-  }));
+  stubData();
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-/** Click untested nodes (lowest index first) until the game ends. */
-function playToEnd() {
-  for (;;) {
-    const left = screen.queryByTestId('tests-left');
-    if (!left) return;
-    const untested = screen.getAllByTestId(/^node-/).find((el) => el.getAttribute('data-fill') !== '#c62828' && el.getAttribute('data-fill') !== '#1565c0')!;
-    fireEvent.click(untested);
-  }
-}
 
 describe('App', () => {
   it('plays a full game from start screen to results', async () => {
