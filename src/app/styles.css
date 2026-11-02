@@ -75,3 +75,59 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .notice.good { border-left: 4px solid #2e7d32; }
 .notice.bad { border-left: 4px solid #b71c1c; }
 .rank { font-size: 28px; font-weight: 700; }
+
+/* Board (projector): larger type for the back of the room */
+.board { font-size: 18px; min-height: 100vh; position: relative; }
+.board .bar > div { display: flex; align-items: center; gap: 14px; }
+.gear { font-size: 18px; padding: 2px 10px; }
+.big { font-size: 64px; font-weight: 700; line-height: 1; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.chip { display: inline-block; padding: 4px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--ink); }
+.chip.done { border-color: #2e7d32; background: #edf7ee; }
+.board-lobby { display: flex; gap: 48px; padding: 40px; align-items: flex-start; flex-wrap: wrap; }
+.join { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.join-url { font-size: 22px; font-weight: 600; word-break: break-all; max-width: 420px; text-align: center; }
+.joined { flex: 1 1 400px; }
+.board-live { padding: 40px; max-width: 1000px; }
+.progress { height: 14px; background: #e4e2dc; border-radius: 7px; overflow: hidden; margin: 16px 0; }
+.progress > div { height: 100%; background: var(--accent); transition: width 0.3s; }
+.board-results { display: flex; gap: 24px; padding: 16px 20px; flex-wrap: wrap; align-items: flex-start; }
+.board-col { flex: 1 1 480px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.board-col > button { align-self: flex-start; }
+/* Fit 30+ players on a projector: the table scrolls inside its panel with a sticky header. */
+.leaderboard-wrap { max-height: calc(100vh - 150px); overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.leaderboard-wrap thead th { position: sticky; top: 0; background: var(--surface); }
+.switch { display: flex; gap: 6px; }
+.leaderboard { width: 100%; border-collapse: collapse; }
+.leaderboard th, .leaderboard td { padding: 3px 10px; text-align: left; border-bottom: 1px solid #eceae6; color: var(--ink); }
+.leaderboard th { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.leaderboard .num { text-align: right; font-variant-numeric: tabular-nums; }
+.leaderboard td.muted { color: var(--ink-2); }
+.leaderboard .strong { font-weight: 700; }
+.leaderboard tr.bot td { background: #f1f6f1; }
+.leaderboard tr.clickable { cursor: pointer; }
+.leaderboard tr.clickable:hover td { background: #fff4d6; }
+.leaderboard button.hide { padding: 0 8px; font-size: 13px; }
+.heatmap { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.heatmap figcaption { font-weight: 600; font-size: 14px; color: #0b0b0b; }
+.heatmap .graph { border: none; max-width: min(520px, calc(100vh - 230px)); }
+
+/* Presenter drawer */
+.drawer { position: absolute; right: 14px; top: 56px; width: 300px; background: #fff; border: 2px solid var(--accent); border-radius: 8px; padding: 12px; font-size: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; gap: 8px; color: var(--ink); z-index: 10; }
+.drawer form { display: flex; flex-direction: column; gap: 8px; }
+.drawer label { display: flex; flex-direction: column; gap: 3px; font-weight: 600; }
+.drawer label.check { flex-direction: row; align-items: center; gap: 6px; }
+.drawer select, .drawer input:not([type='checkbox']) { font: inherit; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink); background: #fff; }
+.drawer .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.error { color: #b71c1c; margin: 0; }
+
+/* Replay */
+.replay { padding: 16px 20px; }
+.replay-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.replay-body { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.replay-side { flex: 1 1 420px; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
+.replay-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.replay input[type='range'] { width: 100%; }
+.toggles { display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; }
+.commentary { margin: 0; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; min-height: 2.8em; }
+.board .label { font-size: 16px; }
