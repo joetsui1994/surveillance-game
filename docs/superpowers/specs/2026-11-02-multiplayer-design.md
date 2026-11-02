@@ -36,29 +36,29 @@ Presenter-led rounds for ~30 laptops, a projector board with a live leaderboard 
 - Unique `(round_id, player_id)`: one play per player per round.
 
 ### Write-once plays
-- Plays are **insert-only**, written once when the game is finished. There is no update path for anon.
+- Plays are written once, when the game is finished, through the `SECURITY DEFINER` function `submit_play(...)`. Anon has **no** direct insert, update or delete on any table; row-level security only allows `select` on `rounds` and `plays`.
 - A player who hasn't finished when the round closes has no row: that is DNF.
-- Row-level security allows an anon insert of a round play only if:
-  - the round is **open**;
-  - `preset_id`, `outbreak_id` and `budget` match the round;
-  - `picks` has exactly `budget` entries, all distinct;
-  - `hidden` is false.
+- `submit_play` locks the round row and raises a named error that the app maps to a `SubmitError`:
+  - `round_closed`: the round is missing or closed;
+  - `invalid`: preset, outbreak or budget don't match the round; `picks` isn't exactly `budget` distinct non-negative entries; or the nickname is empty or over 24 characters;
+  - `duplicate`: the player already has a play in this round.
 - Free-play games are never written (free play is local practice only, no leaderboard).
-- Anon can `select` from `rounds` and `plays`.
+- The database doesn't know the graph, so it can't reject picks ≥ n or equal to the seed; the board drops such plays when scoring.
 
 ### Presenter functions (`SECURITY DEFINER`)
 - `open_round(pin, preset_id, outbreak_id, budget, rank_metric)`: closes any open round, then inserts a new open round with the next `number`. Returns the row.
 - `close_round(pin, round_id)`
 - `hide_play(pin, play_id)`
-- `set_presenter_pin(new_pin)`: callable only from the SQL editor (not granted to anon).
-- The PIN is stored as a pgcrypto `crypt()` hash in `presenter_secret`, which anon cannot read. A wrong PIN raises an error.
+- `check_pin(pin) → boolean`: unlocks the drawer.
+- `set_presenter_pin(new_pin)`: at least 6 characters; callable only from the SQL editor (not granted to anon).
+- The PIN is stored as a pgcrypto bcrypt hash in `presenter_secret`, which anon cannot read. A wrong PIN raises `wrong_pin`.
 
 ### Realtime
 - **Postgres changes:** players and board subscribe to `rounds`; the board subscribes to `plays` inserts and updates (for `hidden`).
 - **Presence:** each open player tab announces `{player_id, nickname, status: 'lobby'|'free'|'playing'|'finished'}` on one channel. The board reads joined counts and chips from presence. Nothing is stored.
 
 ### Schema file
-`supabase/schema.sql` creates everything above (tables, RLS, functions, pgcrypto, realtime publication) and is idempotent enough to re-run on a fresh project.
+`supabase/schema.sql` creates everything above (tables, RLS, functions, pgcrypto, realtime publication) and can be re-run. `supabase/test/` checks it as the anon role on a throwaway local Postgres (`npm run test:sql`).
 
 ### Client config
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are injected at build time.
@@ -70,18 +70,19 @@ All networking goes through one interface:
 
 ```ts
 interface RoundsApi {
-  currentRound(): Promise<Round | null>;
-  onRound(cb: (round: Round | null) => void): Unsubscribe;
-  listPlays(roundId: number): Promise<Play[]>;
+  onRounds(cb: (rounds: Round[]) => void): Unsubscribe;            // all rounds: initial list, then every change
   onPlays(roundId: number, cb: (plays: Play[]) => void): Unsubscribe;
-  submitPlay(play: NewPlay): Promise<void>;          // rejects with a typed error
-  joinPresence(me: PresenceState): PresenceHandle;   // update(status), leave()
+  submitPlay(play: NewPlay): Promise<void>;                        // rejects with SubmitError
+  joinPresence(me: PresenceState): PresenceHandle;                 // update(state), leave()
   onPresence(cb: (players: PresenceState[]) => void): Unsubscribe;
-  openRound(pin: string, cfg: RoundConfig): Promise<Round>;
+  checkPin(pin: string): Promise<boolean>;
+  openRound(pin: string, cfg: RoundConfig): Promise<Round>;        // presenter actions reject with PinError
   closeRound(pin: string, roundId: number): Promise<void>;
   hidePlay(pin: string, playId: number): Promise<void>;
 }
 ```
+
+The Supabase implementation reloads the whole list on every change and on every (re)connect, so a dropped connection resyncs by itself.
 
 Two implementations: `SupabaseRoundsApi` (deployed) and `FakeRoundsApi` (in-memory, enforces the same insert rules; used by tests to drive several players, the presenter and the board in one process).
 
@@ -89,7 +90,7 @@ Two implementations: `SupabaseRoundsApi` (deployed) and `FakeRoundsApi` (in-memo
 
 ## 4. Player flow (`#/`)
 
-**Join:** nickname (remembered), then the **lobby**: "Waiting for the presenter… or play a practice game while you wait."
+**Join:** the start screen doubles as the **lobby**. It shows the nickname field (remembered) and "Waiting for the presenter to start a round. Meanwhile, play a practice game.", or "Connecting to the game…" until the rounds have loaded. A player with a saved nickname counts as being in the lobby. A player without one sees "Round N is open" and a **Join round N** button.
 - **Practice:** the Plan 2 game on the 5 `free` outbreaks, results screen included. Nothing is submitted.
 
 **When a round opens:**
@@ -122,8 +123,9 @@ Hash routes because GitHub Pages can't rewrite URLs. Base font 18 px.
   - outbreak: the 5 `round` outbreaks with prevalence, marking those already used (any round with that outbreak);
   - budget 1–30, default the preset's `defaultBudget`;
   - rank metric: AUC (default), learning-curve AUC, accuracy;
-  - **Open round** and **Close round**.
-- **Results controls:** **Reveal bots** (local toggle), and a ✕ on each leaderboard row while unlocked to **hide a player**.
+  - **Open round N** (disabled while a round is open, to prevent accidents; the database also enforces one open round) and **Close round N**. After opening, the outbreak picker moves on to the next outbreak.
+- **Results controls:** **Reveal bots** (local toggle), and a ✕ on each leaderboard row to **hide a player**, shown only while the drawer is open and unlocked, so it's never on screen by accident.
+- **Lock** forgets the PIN.
 - **Hide drawer** collapses it.
 
 ### Phases (switch automatically from the current round and its status)
@@ -134,8 +136,10 @@ Hash routes because GitHub Pages can't rewrite URLs. Base font 18 px.
 2. **Live** (a round is open): "18 / 25 finished": submitted plays over players in the round (present with status `playing` or `finished`, or already submitted), progress bar, ✓ chips. **No scores.**
 3. **Results** (the latest round is closed):
    - **Leaderboard:** ranked by the round's metric. Ties at 3 decimals share a rank; `null` metrics rank last. Columns: rank, nickname, metric, the other two metrics in muted text, 🎨 (used predictions) and ◎ (used uncertainty). Hidden plays are excluded. 🤖 rows for LE, NE and Random (mean) appear after **Reveal bots**.
-   - **Learning curves:** faint per-player lines, bold human median, and bot curves after reveal (Plan 2 palette).
-   - **First-pick heatmap:** the graph shaded by how many players chose each node first; the seed node marked.
+   - The leaderboard scrolls inside its panel (sticky header) so 30+ players fit on a projector.
+   - A **Learning curves | First tests** switch picks the right-hand figure, so each gets the full width:
+     - **learning curves:** faint per-player lines, bold human median, and bot curves after reveal (Plan 2 palette);
+     - **first-pick heatmap:** the graph shaded (single-hue teal) by how many players chose each node first, counts printed on nodes, the seed node outlined.
    - **Back to lobby** button.
 
 ### Replay
@@ -143,7 +147,7 @@ Clicking a leaderboard row (player, LE or NE) opens the replay panel (mockup `re
 - the graph with numbered picks up to the current step;
 - ⏮ ◀ ▶ Play ⏭ and a step slider (0 = seed only … budget);
 - toggles: predictions, uncertainty, truth;
-- a commentary line for the step (e.g. "Test 3: node (4, 7) — infected · 2 hops from nearest known infection · AUC 0.91 → 0.93");
+- a commentary line for the step (e.g. "Test 3: location 86, infected · next to a known infection · AUC 0.99 → 0.98");
 - a mini AUC chart with a step marker.
 
 Random has no single pick sequence and is not replayable.
@@ -169,7 +173,7 @@ Random has no single pick sequence and is not replayable.
 | Wi-Fi drops mid-play | Play continues locally; the submission is queued in localStorage and retried while the round is open |
 | Page refresh | Session and pending submission restored |
 | Round closed before submit | "Your game wasn't counted"; back to lobby |
-| Supabase unreachable | Practice still works; lobby shows "Can't reach the server"; board shows a connection banner. Backup: recorded run-through video |
+| Supabase unreachable | Practice still works; lobby stays on "Connecting to the game…" and the board on "Connecting…". Backup: recorded run-through video |
 | Wrong PIN | Inline error in the drawer; nothing changes |
 | Env vars missing | Single-player mode (Plan 2) |
 
@@ -183,8 +187,10 @@ Random has no single pick sequence and is not replayable.
   - nickname de-duplication.
 - **`FakeRoundsApi`:** the same insert rules as RLS (open round, matching config, distinct picks of length budget, one per player).
 - **Integration (jsdom + fake):** 3 players and the board in one test: open → players switch → finish → board counts → close → ranks and comparisons appear; plus a close mid-game giving DNF.
-- **Smoke test against the real project** (`npm run smoke`): open a round with the PIN, submit a valid play, and confirm the database **rejects** a wrong budget, a duplicate, a play after close and a wrong PIN.
-- **Load test** (`npm run loadtest`): 30 simulated players join presence, play and submit together; reports failures and latency.
+- **Schema checks** (`npm run test:sql`): `schema.sql` applied twice to a throwaway local Postgres, then every rule exercised as the anon role.
+- **Smoke test against the real project** (`npm run smoke`): wrong and right PIN, open a round (seen live by a second client), presence, a valid play (seen live by the board), and the database **rejecting** a duplicate, a wrong budget, repeated picks and a play after close; hiding and closing seen live.
+- **Load test** (`npm run loadtest`): 30 simulated players join presence and submit within 3 s; reports failures and latency.
+- Both live scripts refuse to run while a round is open (unless `--force`), and run against the fake with `LIVE_FAKE=1` to check the scripts themselves.
 - **Dry run:** 2–3 colleagues on laptops, ideally on venue-like Wi-Fi.
 
 ## 9. Schedule
