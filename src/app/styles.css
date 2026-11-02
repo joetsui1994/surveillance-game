@@ -74,8 +74,14 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .swatch { display: inline-block; width: 10px; height: 3px; margin-right: 5px; vertical-align: middle; }
 
 /* Multiplayer (player side) */
-.lobby-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--ink); }
-.lobby-status.live { border: 2px solid var(--accent); }
+/* Lobby status: plain text with a status dot (not a box, so it can't be mistaken for an input). */
+.lobby-status { display: flex; align-items: center; gap: 10px; color: var(--ink-2); line-height: 1.4; }
+.lobby-status::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: #b0aea8; animation: lobby-pulse 2s ease-in-out infinite; }
+@keyframes lobby-pulse { 50% { opacity: 0.35; } }
+/* A round is open: a tinted banner with an accent stripe and the Join button. */
+.lobby-status.live { justify-content: space-between; padding: 12px 14px; background: #eaf1fb; border-left: 4px solid var(--accent); border-radius: 4px; color: var(--ink); }
+.lobby-status.live::before { display: none; }
+@media (prefers-reduced-motion: reduce) { .lobby-status::before { animation: none; } }
 .banner { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 20px; background: #fff4d6; border-bottom: 1px solid #e6cf8f; color: var(--ink); }
 .notice { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--ink); line-height: 1.45; }
 .notice.good { border-left: 4px solid #2e7d32; }
