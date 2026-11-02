@@ -43,4 +43,15 @@ describe('GraphView', () => {
     expect(screen.getByTestId('wrong-8')).toBeTruthy();
     expect(screen.getByTestId('node-8').getAttribute('data-fill')).toBe(COLORS.truthInfected);
   });
+
+  it('on hover, highlights only the node and its own edges, and fades nothing', () => {
+    render(<GraphView {...base} hovered={0} />);
+    const edge = (a: number, b: number) => screen.getByTestId(`edge-${a}-${b}`);
+    expect(edge(0, 1).getAttribute('stroke')).toBe(COLORS.ink);
+    expect(edge(0, 3).getAttribute('stroke')).toBe(COLORS.ink);
+    expect(edge(4, 5).getAttribute('stroke')).toBe(COLORS.edge);
+    expect(screen.getByTestId('node-0').getAttribute('stroke-width')).toBe('3.5');
+    expect(screen.getByTestId('node-1').getAttribute('stroke-width')).toBe('0.8');
+    expect(document.querySelector('[opacity="0.25"]')).toBeNull();
+  });
 });

@@ -33,7 +33,7 @@ export function StartScreen({ presets, initialNickname, onStart, round = null, o
       <p className="lead">
         An outbreak is spreading across a network of locations. You have <b>{preset?.defaultBudget ?? 'a few'} tests</b>. One
         starting location is already tested. Choose where to test next, and a model maps the rest. Your score is the model's
-        AUC on the locations you didn't test, as in Tsui et al. (2024).
+        AUC on the locations you didn't test.
       </p>
       <label className="field">
         Nickname

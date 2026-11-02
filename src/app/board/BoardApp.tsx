@@ -233,7 +233,7 @@ function Results({ round, model, outbreak, rows, le, showBots, selected, onSelec
       ? [
           { key: 'rand', name: 'Random (mean)', short: 'Random', color: '#8a8984', width: 1.5, dash: '4 3', values: bot('bot-RAND')?.curve ?? [] },
           { key: 'ne', name: 'NE', short: 'NE', color: '#6250d6', width: 2, values: bot('bot-NE')?.curve ?? [] },
-          { key: 'le', name: 'LE (paper)', short: 'LE', color: '#008300', width: 2, values: bot('bot-LE')?.curve ?? [] },
+          { key: 'le', name: 'LE', short: 'LE', color: '#008300', width: 2, values: bot('bot-LE')?.curve ?? [] },
         ]
       : []),
     { key: 'median', name: `Room median (${humans.length} players)`, short: 'Room', color: '#0b0b0b', width: 3, values: median },
@@ -253,7 +253,7 @@ function Results({ round, model, outbreak, rows, le, showBots, selected, onSelec
           <button role="tab" aria-selected={figure === 'heatmap'} className={figure === 'heatmap' ? 'primary' : ''} onClick={() => setFigure('heatmap')}>First tests</button>
         </div>
         {figure === 'curves' ? (
-          <AucChart series={series} background={humans.map((r) => r.curve)} subtitle="Faint lines: each player · AUC on untested locations (the paper's metric)" />
+          <AucChart series={series} background={humans.map((r) => r.curve)} subtitle="Faint lines: each player · AUC on untested locations · higher is better" />
         ) : (
           <FirstPickHeatmap graph={model.graph} layout={model.preset.layout} counts={firstPickCounts(plays, model.graph.n)} seedNode={outbreak.seedNode} />
         )}

@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { probabilityStd } from '../../core/entropy.ts';
 import type { Outbreak, PresetModel } from '../../core/presets.ts';
 import { fitLaplace } from '../../core/surrogate.ts';
+import { Explainer } from '../components/Explainer.tsx';
 import { GraphView } from '../components/GraphView.tsx';
 import { SidePanel } from '../components/SidePanel.tsx';
 import { relativeScale } from '../scales.ts';
@@ -25,6 +26,7 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
   const [showPredictions, setShowPredictions] = useState(false);
   const [showUncertainty, setShowUncertainty] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
+  const [showKey, setShowKey] = useState(false);
 
   const obs = observations(session, outbreak.truth);
   const tested = useMemo(() => new Map(obs.map((o) => [o.node, o.y])), [session.picks]);
@@ -54,6 +56,9 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
         <div>
           <b>{title}</b> · {preset.name} · outbreak {outbreak.id} · <i>{nickname}</i>
         </div>
+        <button className="key-button" aria-expanded={showKey} onClick={() => setShowKey((v) => !v)}>
+          What do the colours mean?
+        </button>
         <div aria-label="tests left">
           Tests left:{' '}
           <span className="pips" aria-hidden="true">
@@ -65,6 +70,7 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
         </div>
       </header>
       {banner}
+      {showKey && <Explainer onClose={() => setShowKey(false)} />}
       <div className="play-body">
         <GraphView
           graph={graph}
@@ -77,7 +83,6 @@ export function PlayScreen({ model, outbreak, session, nickname, onSessionChange
           onPick={(node) => onSessionChange((s) => (isFinished(s) || isTested(s, node) ? s : pick(s, node, graph.n)))}
         />
         <SidePanel
-          graph={graph}
           showPredictions={showPredictions}
           showUncertainty={showUncertainty}
           onTogglePredictions={togglePredictions}

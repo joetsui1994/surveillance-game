@@ -23,10 +23,14 @@ function Density({ x, title, sd, fill, stroke }: { x: number; title: string; sd:
   );
 }
 
-export function Explainer() {
+/** Key to the map, shown on request from the play screen's top bar. */
+export function Explainer({ onClose }: { onClose: () => void }) {
   return (
-    <details className="panel" open>
-      <summary>What do the colours mean?</summary>
+    <div className="panel explainer" data-testid="explainer" role="dialog" aria-label="What do the colours mean?">
+      <div className="explainer-head">
+        <b>What do the colours mean?</b>
+        <button onClick={onClose}>Close</button>
+      </div>
       <p>
         <b style={{ color: COLORS.infected }}>+</b> / <b style={{ color: COLORS.clear }}>−</b> tested location: infected / clear.
       </p>
@@ -43,6 +47,6 @@ export function Explainer() {
         Both have P(infected) = 0.5 on average, but only the right one gets a thick ring. Rings are relative: the thickest
         ring is the most uncertain location right now.
       </p>
-    </details>
+    </div>
   );
 }

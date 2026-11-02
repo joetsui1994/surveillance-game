@@ -38,7 +38,7 @@ export function AucChart({
   background = [],
   marker,
   title = "How good was the model's map after each test?",
-  subtitle = "AUC on untested locations (the paper's metric) · higher is better",
+  subtitle = 'AUC on untested locations · higher is better',
 }: AucChartProps) {
   const N = Math.max(1, Math.max(...series.map((s) => s.values.length)) - 1);
   // Axis starts at 0.5 (chance) unless some value is lower; then it extends down in steps of 0.1.

@@ -46,12 +46,12 @@ describe('player in a presenter-led round', () => {
     expect(api.plays).toHaveLength(1);
     expect(api.plays[0]).toMatchObject({ nickname: 'ada', budget: 3, outbreakId: roundOutbreak.id });
     expect(presence).toMatchObject([{ status: 'finished', roundId: 1 }]);
-    expect(within(screen.getByTestId('legend')).queryByText('LE (paper)')).toBeNull();
+    expect(within(screen.getByTestId('legend')).queryByText('LE')).toBeNull();
 
     await act(() => api.submitPlay({ ...api.plays[0], playerId: 'other', nickname: 'bob', picks: others.slice(10, 13) }));
     await close();
     expect(screen.getByTestId('round-notice').textContent).toMatch(/^#[12] of 2 · ranked by AUC$/);
-    expect(within(screen.getByTestId('legend')).getByText('LE (paper)')).toBeTruthy();
+    expect(within(screen.getByTestId('legend')).getByText('LE')).toBeTruthy();
     expect(screen.getByTestId('verdict')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to the lobby' }));

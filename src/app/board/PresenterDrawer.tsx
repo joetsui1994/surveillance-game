@@ -123,7 +123,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
         Rank by
         <select value={metric} onChange={(e) => setMetric(e.target.value as RankMetric)}>
           {(Object.keys(METRIC_LABEL) as RankMetric[]).map((m) => (
-            <option key={m} value={m}>{METRIC_LABEL[m]}{m === 'auc' ? ' (paper)' : ''}</option>
+            <option key={m} value={m}>{METRIC_LABEL[m]}</option>
           ))}
         </select>
       </label>

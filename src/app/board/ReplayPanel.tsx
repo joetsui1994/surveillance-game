@@ -86,7 +86,7 @@ export function ReplayPanel({ model, outbreak, row, le, median, onClose }: Repla
             marker={t}
             series={[
               { key: 'median', name: 'Room median', short: 'Room', color: '#8a8984', width: 2, dash: '4 3', values: median },
-              { key: 'le', name: 'LE (paper)', short: 'LE', color: '#008300', width: 2, values: le },
+              { key: 'le', name: 'LE', short: 'LE', color: '#008300', width: 2, values: le },
               { key: 'row', name: row.name, short: row.bot ? row.name.split(' ')[0] : row.name, color: '#0b0b0b', width: 3, values: row.curve },
             ]}
           />

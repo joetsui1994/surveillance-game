@@ -21,7 +21,7 @@ export interface Row extends Scores {
 }
 
 const BOTS: { policy: PolicyName; name: string }[] = [
-  { policy: 'LE', name: 'LE (paper)' },
+  { policy: 'LE', name: 'LE' },
   { policy: 'NE', name: 'NE' },
   { policy: 'RAND', name: 'Random (mean)' },
 ];

@@ -4,9 +4,8 @@ import { COLORS, predictionColor, ringStyle } from '../scales.ts';
 const VIEW = 330;
 const PAD = 25;
 const R = 9;
-const MAX_HOPS = 3;
-/** Outline width by hop distance from the hovered node (0 = the hovered node itself). */
-const HOP_OUTLINE = [3.5, 2.2, 1.6, 1.2];
+/** Outline of the hovered node; its own edges are drawn darker and thicker. Nothing else changes on hover. */
+const HOVER_OUTLINE = 3.5;
 
 export interface GraphViewProps {
   graph: Graph;
@@ -31,10 +30,8 @@ export interface GraphViewProps {
 
 export function GraphView(props: GraphViewProps) {
   const { graph, layout, tested, predictions, uncertainty, truth, wrong, hovered, onHover, onPick, order } = props;
-  const { n, dist } = graph;
+  const { n } = graph;
   const xy = (i: number): [number, number] => [PAD + layout[i][0] * (VIEW - 2 * PAD), PAD + layout[i][1] * (VIEW - 2 * PAD)];
-  const hops = (i: number) => (hovered === null ? -1 : dist[hovered * n + i]);
-  const near = (i: number) => hovered === null || (hops(i) >= 0 && hops(i) <= MAX_HOPS);
 
   const fill = (i: number) => {
     const result = tested.get(i);
@@ -48,18 +45,30 @@ export function GraphView(props: GraphViewProps) {
       {graph.edges.map(([a, b]) => {
         const [x1, y1] = xy(a);
         const [x2, y2] = xy(b);
-        return <line key={`${a}-${b}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={COLORS.edge} strokeWidth={1.5} opacity={near(a) || near(b) ? 1 : 0.25} />;
+        const touches = hovered === a || hovered === b;
+        return (
+          <line
+            key={`${a}-${b}`}
+            data-testid={`edge-${a}-${b}`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={touches ? COLORS.ink : COLORS.edge}
+            strokeWidth={touches ? 3 : 1.5}
+          />
+        );
       })}
       {Array.from({ length: n }, (_, i) => {
         const [x, y] = xy(i);
         const result = tested.get(i);
         const isTested = result !== undefined;
-        const h = hops(i);
-        const outline = h >= 0 && h <= MAX_HOPS ? HOP_OUTLINE[h] : isTested ? 2.5 : 0.8;
+        const isHovered = hovered === i;
+        const outline = isHovered ? HOVER_OUTLINE : isTested ? 2.5 : 0.8;
         const ring = !isTested && uncertainty ? ringStyle(uncertainty[i]) : null;
         const clickable = !isTested && onPick !== undefined;
         return (
-          <g key={i} opacity={near(i) ? 1 : 0.25}>
+          <g key={i}>
             {ring && <circle cx={x} cy={y} r={R + ring.width / 2 + 0.5} fill="none" stroke={COLORS.ring} strokeWidth={ring.width} opacity={ring.opacity} pointerEvents="none" />}
             <circle
               data-testid={`node-${i}`}
@@ -68,7 +77,7 @@ export function GraphView(props: GraphViewProps) {
               cy={y}
               r={R}
               fill={fill(i)}
-              stroke={isTested || h >= 0 ? '#000' : COLORS.outline}
+              stroke={isTested || isHovered ? '#000' : COLORS.outline}
               strokeWidth={outline}
               style={{ cursor: clickable ? 'pointer' : 'default' }}
               onMouseEnter={() => onHover(i)}

@@ -50,9 +50,9 @@ export function ResultsScreen({ model, outbreak, session, bots, title = 'Results
   const you: ChartSeries = { key: 'you', name: 'You', short: 'You', values: score.trajectory.auc, ...SERIES_STYLE.you };
   const series: ChartSeries[] = showComparison
     ? [
-        { key: 'rand', name: 'Random (mean, 90% band)', short: 'Random', values: rand.mean.slice(0, upTo), ...SERIES_STYLE.rand },
+        { key: 'rand', name: 'Random: average, and range of 90% of runs', short: 'Random', values: rand.mean.slice(0, upTo), ...SERIES_STYLE.rand },
         { key: 'ne', name: 'NE', short: 'NE', values: ne, ...SERIES_STYLE.ne },
-        { key: 'le', name: 'LE (paper)', short: 'LE', values: le, ...SERIES_STYLE.le },
+        { key: 'le', name: 'LE', short: 'LE', values: le, ...SERIES_STYLE.le },
         you,
       ]
     : [you];
@@ -78,7 +78,7 @@ export function ResultsScreen({ model, outbreak, session, bots, title = 'Results
           {notice}
           <div className="scores">
             <div>
-              <div className="label">AUC (paper metric)</div>
+              <div className="label">AUC</div>
               <div className="hero" data-testid="score-auc">{fmt(score.auc)}</div>
             </div>
             <div>

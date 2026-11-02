@@ -84,11 +84,11 @@ describe('BoardApp', () => {
     const board = screen.getByTestId('leaderboard');
     expect(within(board).getByText('ada')).toBeTruthy();
     expect(within(board).getByText('ada (2)')).toBeTruthy();
-    expect(within(board).queryByText('LE (paper)')).toBeNull();
+    expect(within(board).queryByText('LE')).toBeNull();
     expect(within(board).getAllByText('🎨', { exact: false })).toHaveLength(2); // header + ada's row
 
     fireEvent.click(within(drawer).getByLabelText('Reveal bots'));
-    expect(within(screen.getByTestId('leaderboard')).getByText('LE (paper)')).toBeTruthy();
+    expect(within(screen.getByTestId('leaderboard')).getByText('LE')).toBeTruthy();
     expect(within(screen.getByTestId('leaderboard')).getByText('Random (mean)')).toBeTruthy();
 
     // Replay ada's game.

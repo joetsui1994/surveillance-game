@@ -24,10 +24,10 @@ describe('App', () => {
     expect(screen.getByTestId('tests-left').textContent).toBe('9 / 10');
 
     playToEnd();
-    expect(screen.getByText('AUC (paper metric)')).toBeTruthy();
+    expect(screen.getByText('AUC')).toBeTruthy();
     expect(screen.getByTestId('score-auc').textContent).toMatch(/^0\.\d{3}$|^–$/);
     const legend = screen.getByTestId('legend');
-    for (const name of ['You', 'LE (paper)', 'NE', 'Random (mean, 90% band)']) expect(within(legend).getByText(name)).toBeTruthy();
+    for (const name of ['You', 'LE', 'NE', 'Random: average, and range of 90% of runs']) expect(within(legend).getByText(name)).toBeTruthy();
     expect(screen.getByTestId('verdict').textContent).toMatch(/On this outbreak you finished|undefined/);
   });
 
@@ -86,6 +86,26 @@ describe('App', () => {
     fireEvent.click(screen.getByLabelText(/Uncertainty/));
     expect(box.textContent).toMatch(/±/);
     expect(box.textContent).toMatch(/Uncertainty rank/);
+  });
+
+  it('keeps the colour explainer closed until asked for', async () => {
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText('e.g. ada'), { target: { value: 'ada' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(screen.queryByTestId('explainer')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'What do the colours mean?' }));
+    expect(screen.getByTestId('explainer').textContent).toMatch(/Orange rings/);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('explainer')).toBeNull();
+  });
+
+  it('never mentions the paper in the interface', async () => {
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText('e.g. ada'), { target: { value: 'ada' } });
+    expect(document.body.textContent).not.toMatch(/paper|Tsui/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    playToEnd();
+    expect(document.body.textContent).not.toMatch(/paper|Tsui/i);
   });
 
   it('starts the game when Enter is pressed in the nickname field', async () => {
