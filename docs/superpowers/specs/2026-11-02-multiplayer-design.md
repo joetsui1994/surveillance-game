@@ -136,11 +136,9 @@ Hash routes because GitHub Pages can't rewrite URLs. Base font 18 px.
    - "Round N next".
 2. **Live** (a round is open): "18 / 25 finished": submitted plays over players in the round (present with status `playing` or `finished`, or already submitted), progress bar, ✓ chips. **No scores.**
 3. **Results** (the latest round is closed):
-   - **Leaderboard:** ranked by the round's metric. Ties at 3 decimals share a rank; `null` metrics rank last. Columns: rank, nickname, metric, the other two metrics in muted text, 🎨 (used predictions) and ◎ (used uncertainty). Hidden plays are excluded. 🤖 rows for LE, NE and Random (mean) appear after **Reveal bots**.
+   - **Leaderboard:** ranked by the round's metric. Ties at 3 decimals share a rank; `null` metrics rank last. Columns: rank, nickname, metric, the other two metrics in muted text, and "Looked at" with small text tags (`predictions`, `uncertainty`) for the overlays the player switched on. One type size throughout; the ranking metric is bold. Hidden plays are excluded. Rows for LE, NE and Random (mean) appear after **Reveal bots**, with a "bot" tag and no rank.
    - The leaderboard scrolls inside its panel (sticky header) so 30+ players fit on a projector.
-   - A **Learning curves | First tests** switch picks the right-hand figure, so each gets the full width:
-     - **learning curves:** faint per-player lines, bold human median, and bot curves after reveal (Plan 2 palette);
-     - **first-pick heatmap:** the graph shaded (single-hue teal) by how many players chose each node first, counts printed on nodes, the seed node outlined.
+   - **Learning curves** (right-hand side): faint per-player lines, bold human median, and bot curves after reveal (Plan 2 palette). Hovering a legend entry or end label highlights that line and fades the rest (all AUC charts). The first-pick heatmap was dropped after testing: not useful enough.
    - **Back to lobby** button.
 
 ### Replay
@@ -154,7 +152,7 @@ Clicking a leaderboard row (player, LE or NE) opens the replay panel (mockup `re
 Random has no single pick sequence and is not replayable.
 
 ### Reuse
-`GraphView`, `AucChart`, `scales`, `scoreSession`/`replay`. New: `Leaderboard`, `FirstPickHeatmap`, `ReplayPanel`, `PresenterDrawer`, `Qr`, plus pure modules for ranking, heatmap counts and replay frames.
+`GraphView`, `AucChart`, `scales`, `scoreSession`/`replay`. New: `Leaderboard`, `ReplayPanel`, `PresenterDrawer`, `Qr`, plus pure modules for ranking and replay frames.
 
 ## 6. Deployment
 
@@ -183,7 +181,6 @@ Random has no single pick sequence and is not replayable.
 - **Unit (pure):**
   - player round state machine (lobby → round → submitted → closed; practice → banner → join/finish; closed before finishing);
   - ranking (metric choice, ties at 3 dp, `null` last, hidden excluded);
-  - first-pick heatmap counts;
   - replay frames and commentary;
   - nickname de-duplication.
 - **`FakeRoundsApi`:** the same insert rules as RLS (open round, matching config, distinct picks of length budget, one per player).

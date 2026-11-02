@@ -3,12 +3,11 @@ import { presetModel, type Outbreak, type PresetModel } from '../../core/presets
 import { AucChart } from '../components/AucChart.tsx';
 import { botResult, loadGameData, type GameData } from '../data.ts';
 import { usePresenceList, useRoundPlays, useRounds } from '../net/hooks.ts';
-import { latestRound, PinError, type Play, type PresenceState, type Round, type RoundsApi } from '../net/types.ts';
-import { FirstPickHeatmap } from './FirstPickHeatmap.tsx';
+import { latestRound, PinError, type PresenceState, type Round, type RoundsApi } from '../net/types.ts';
 import { Leaderboard } from './Leaderboard.tsx';
 import { PresenterDrawer } from './PresenterDrawer.tsx';
 import { Qr } from './Qr.tsx';
-import { firstPickCounts, METRIC_LABEL } from './ranking.ts';
+import { METRIC_LABEL } from './ranking.ts';
 import { ReplayPanel } from './ReplayPanel.tsx';
 import { leaderboardRows, roomMedian, type Row } from './rows.ts';
 
@@ -124,7 +123,6 @@ export function BoardApp({ api }: { api: RoundsApi | null }) {
           model={model}
           outbreak={outbreak}
           rows={rows}
-          plays={plays ?? []}
           le={botResult(data.bots, latest.presetId, latest.outbreakId, 'LE').auc.mean.slice(0, latest.budget + 1)}
           showBots={showBots}
           selected={selected}
@@ -211,7 +209,6 @@ interface ResultsProps {
   model: PresetModel;
   outbreak: Outbreak;
   rows: Row[];
-  plays: Play[];
   le: (number | null)[];
   showBots: boolean;
   selected: Row | null;
@@ -220,8 +217,7 @@ interface ResultsProps {
   onDismiss: () => void;
 }
 
-function Results({ round, model, outbreak, rows, le, showBots, selected, onSelect, onHide, onDismiss, plays }: ResultsProps) {
-  const [figure, setFigure] = useState<'curves' | 'heatmap'>('curves');
+function Results({ round, model, outbreak, rows, le, showBots, selected, onSelect, onHide, onDismiss }: ResultsProps) {
   const median = roomMedian(rows);
   const humans = rows.filter((r) => !r.bot);
   const bot = (key: string) => rows.find((r) => r.key === key);
@@ -244,19 +240,11 @@ function Results({ round, model, outbreak, rows, le, showBots, selected, onSelec
         <div className="leaderboard-wrap">
           <Leaderboard rows={rows} metric={round.rankMetric} onSelect={onSelect} onHide={onHide} />
         </div>
-        <p className="muted small">🎨 looked at predictions · ◎ looked at uncertainty · click a row to replay</p>
+        <p className="muted small">"Looked at": model overlays the player switched on during the game · click a row to replay</p>
         <button onClick={onDismiss}>Back to lobby</button>
       </div>
       <div className="board-col">
-        <div className="switch" role="tablist">
-          <button role="tab" aria-selected={figure === 'curves'} className={figure === 'curves' ? 'primary' : ''} onClick={() => setFigure('curves')}>Learning curves</button>
-          <button role="tab" aria-selected={figure === 'heatmap'} className={figure === 'heatmap' ? 'primary' : ''} onClick={() => setFigure('heatmap')}>First tests</button>
-        </div>
-        {figure === 'curves' ? (
-          <AucChart series={series} background={humans.map((r) => r.curve)} subtitle="Faint lines: each player · AUC on untested locations · higher is better" />
-        ) : (
-          <FirstPickHeatmap graph={model.graph} layout={model.preset.layout} counts={firstPickCounts(plays, model.graph.n)} seedNode={outbreak.seedNode} />
-        )}
+        <AucChart series={series} background={humans.map((r) => r.curve)} subtitle="Faint lines: each player · AUC on untested locations · higher is better" />
       </div>
     </section>
   );

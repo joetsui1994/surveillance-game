@@ -23,7 +23,7 @@ export function Leaderboard({ rows, metric, onSelect, onHide }: LeaderboardProps
           {OTHER[metric].map((m) => (
             <th key={m} className="num muted">{METRIC_LABEL[m]}</th>
           ))}
-          <th title="Looked at predictions / uncertainty">🎨 ◎</th>
+          <th>Looked at</th>
           {onHide && <th />}
         </tr>
       </thead>
@@ -37,14 +37,18 @@ export function Leaderboard({ rows, metric, onSelect, onHide }: LeaderboardProps
               onClick={replayable ? () => onSelect(r) : undefined}
               data-testid={`row-${r.key}`}
             >
-              <td>{r.bot ? '🤖' : (r.rank ?? '–')}</td>
-              <td>{r.name}</td>
+              <td>{r.bot ? '–' : (r.rank ?? '–')}</td>
+              <td>
+                {r.name}
+                {r.bot && <span className="tag bot">bot</span>}
+              </td>
               <td className="num strong">{formatMetric(metricValue(r, metric), metric)}</td>
               {OTHER[metric].map((m) => (
                 <td key={m} className="num muted">{formatMetric(metricValue(r, m), m)}</td>
               ))}
               <td>
-                {r.play?.usedPredictions ? '🎨' : ''} {r.play?.usedUncertainty ? '◎' : ''}
+                {r.play?.usedPredictions && <span className="tag">predictions</span>}
+                {r.play?.usedUncertainty && <span className="tag">uncertainty</span>}
               </td>
               {onHide && (
                 <td>

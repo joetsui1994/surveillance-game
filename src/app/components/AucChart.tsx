@@ -49,6 +49,11 @@ export function AucChart({
   const Y = (v: number) => B - ((Math.min(Math.max(v, yMin), 1) - yMin) / (1 - yMin)) * (B - T);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverT, setHoverT] = useState<number | null>(null);
+  // Hovering a legend entry or an end label highlights that line: the others fade and it is drawn on top.
+  const [focus, setFocus] = useState<string | null>(null);
+  const dim = (key: string) => focus !== null && focus !== key;
+  const focusProps = (key: string) => ({ onMouseEnter: () => setFocus(key), onMouseLeave: () => setFocus(null) });
+  const drawOrder = focus === null ? series : [...series.filter((s) => s.key !== focus), ...series.filter((s) => s.key === focus)];
 
   const path = (vals: (number | null)[]) => {
     let d = '';
@@ -75,7 +80,7 @@ export function AucChart({
       <div className="chart-subtitle">{subtitle}</div>
       <div className="legend" data-testid="legend">
         {[...series].reverse().map((s) => (
-          <span key={s.key}>
+          <span key={s.key} data-testid={`legend-${s.key}`} className={dim(s.key) ? 'dim' : undefined} {...focusProps(s.key)}>
             <svg width={22} height={10} aria-hidden="true">
               <line x1={1} y1={5} x2={21} y2={5} stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash} strokeLinecap="round" />
             </svg>
@@ -109,17 +114,19 @@ export function AucChart({
             />
           )}
           {background.map((values, k) => (
-            <path key={`bg${k}`} d={path(values)} fill="none" stroke="#0b0b0b" strokeOpacity={0.14} strokeWidth={1} strokeLinejoin="round" />
+            <path key={`bg${k}`} d={path(values)} fill="none" stroke="#0b0b0b" strokeOpacity={focus === null ? 0.14 : 0.05} strokeWidth={1} strokeLinejoin="round" />
           ))}
           {marker !== undefined && <line data-testid="chart-marker" x1={X(marker)} x2={X(marker)} y1={T} y2={B} stroke="#ef6c00" strokeWidth={2} />}
-          {series.map((s) => (
-            <g key={s.key}>
+          {drawOrder.map((s) => (
+            <g key={s.key} data-testid={`series-${s.key}`} opacity={dim(s.key) ? 0.2 : 1}>
               <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash} strokeLinejoin="round" strokeLinecap="round" />
               {last(s.values) !== null && <circle cx={X(N)} cy={Y(last(s.values)!)} r={s.width >= 3 ? 4 : 3} fill={s.color} stroke="#fcfcfb" strokeWidth={2} />}
             </g>
           ))}
           {labelled.map((s, k) => (
-            <g key={s.key}>
+            <g key={s.key} data-testid={`label-${s.key}`} opacity={dim(s.key) ? 0.35 : 1} style={{ cursor: 'default' }} {...focusProps(s.key)}>
+              {/* Generous invisible hit area, so the label is easy to hover. */}
+              <rect x={R + 6} y={labelYs[k] - 8} width={W - R - 6} height={16} fill="transparent" />
               <line x1={X(N) + 5} y1={Y(last(s.values)!)} x2={R + 8} y2={labelYs[k]} stroke="#c9c7c1" />
               <text x={R + 11} y={labelYs[k] + 4} fontSize={11} fontWeight={s.width >= 3 ? 700 : 400} fill="#0b0b0b">
                 {s.short} {last(s.values)!.toFixed(2)}

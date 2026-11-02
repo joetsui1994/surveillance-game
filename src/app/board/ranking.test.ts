@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parsePresetFile, presetModel } from '../../core/presets.ts';
 import type { Play } from '../net/types.ts';
-import { displayNames, firstPickCounts, formatMetric, medianCurve, metricValue, rankBy, scorePlays } from './ranking.ts';
+import { displayNames, formatMetric, medianCurve, metricValue, rankBy, scorePlays } from './ranking.ts';
 
 const preset = parsePresetFile(JSON.parse(readFileSync('public/data/presets.json', 'utf8'))).presets[0];
 const model = presetModel(preset);
@@ -45,12 +45,6 @@ describe('scorePlays', () => {
 describe('helpers', () => {
   it('medianCurve takes the per-step median and skips nulls', () => {
     expect(medianCurve([[0.5, 0.6, null], [0.7, 0.8, 0.9], [0.6, null, 0.7]])).toEqual([0.6, 0.7, 0.8]);
-  });
-  it('firstPickCounts counts visible first picks', () => {
-    const counts = firstPickCounts([play('a', [3, 4]), play('b', [3]), play('c', [5]), play('d', [3], { hidden: true })], 10);
-    expect(counts[3]).toBe(2);
-    expect(counts[5]).toBe(1);
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(3);
   });
   it('formatMetric shows accuracy as a percentage', () => {
     expect(formatMetric(0.8123, 'auc')).toBe('0.812');

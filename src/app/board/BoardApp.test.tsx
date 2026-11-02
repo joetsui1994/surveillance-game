@@ -85,11 +85,15 @@ describe('BoardApp', () => {
     expect(within(board).getByText('ada')).toBeTruthy();
     expect(within(board).getByText('ada (2)')).toBeTruthy();
     expect(within(board).queryByText('LE')).toBeNull();
-    expect(within(board).getAllByText('🎨', { exact: false })).toHaveLength(2); // header + ada's row
+    expect(within(board).getByText('Looked at')).toBeTruthy();
+    expect(within(board).getAllByText('predictions')).toHaveLength(1); // only ada used predictions
+    expect(document.body.textContent).not.toMatch(/🎨|◎|🤖/);
+    expect(screen.queryByRole('tab')).toBeNull(); // no "First tests" switch: curves only
 
     fireEvent.click(within(drawer).getByLabelText('Reveal bots'));
     expect(within(screen.getByTestId('leaderboard')).getByText('LE')).toBeTruthy();
     expect(within(screen.getByTestId('leaderboard')).getByText('Random (mean)')).toBeTruthy();
+    expect(within(screen.getByTestId('row-bot-LE')).getByText('bot')).toBeTruthy();
 
     // Replay ada's game.
     fireEvent.click(within(screen.getByTestId('leaderboard')).getByText('ada'));

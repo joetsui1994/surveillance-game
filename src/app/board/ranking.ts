@@ -95,10 +95,3 @@ export function medianCurve(curves: (number | null)[][]): (number | null)[] {
     return v.length % 2 === 1 ? v[m] : (v[m - 1] + v[m]) / 2;
   });
 }
-
-/** How many players tested each node first. */
-export function firstPickCounts(plays: Play[], n: number): number[] {
-  const counts = new Array<number>(n).fill(0);
-  for (const p of plays) if (!p.hidden && p.picks.length > 0 && p.picks[0] >= 0 && p.picks[0] < n) counts[p.picks[0]]++;
-  return counts;
-}
