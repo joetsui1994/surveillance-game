@@ -14,7 +14,9 @@
     "data:bots": "node --disable-warning=ExperimentalWarning scripts/build-bots.ts",
     "data": "npm run data:presets && npm run data:calibrate && npm run data:bots",
     "validate": "node --disable-warning=ExperimentalWarning scripts/export-scenarios.ts && uv run --project offline python offline/validate_surrogate.py",
-    "test:sql": "supabase/test/run.sh"
+    "test:sql": "supabase/test/run.sh",
+    "smoke": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/smoke.ts",
+    "loadtest": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/loadtest.ts"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
