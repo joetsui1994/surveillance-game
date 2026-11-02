@@ -28,6 +28,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Without these the build silently falls back to single-player; refuse to deploy that by accident.
+      - name: Check Supabase repository variables
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Repository variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must both be set (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}

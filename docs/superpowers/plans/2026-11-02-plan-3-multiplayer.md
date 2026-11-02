@@ -4668,11 +4668,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 These steps need the user's accounts and approval. Do them in order and stop at each **confirm**.
 
-1. **Supabase (user):** create the project; run `supabase/schema.sql` in the SQL editor; run `select set_presenter_pin('…');` (≥ 6 characters; the user keeps the PIN, never pasted in chat). The user pastes the project URL and **anon** key (never the service-role key).
+1. **Supabase (user):** create the project; run `supabase/schema.sql` in the SQL editor; run `select set_presenter_pin('…');` (a long random passphrase, ≥ 10 characters; the user keeps the PIN, never pasted in chat). The user pastes the project URL and **anon** key (never the service-role key).
 2. Create `.env.local` from `.env.example` with those two values.
 3. Run `PRESENTER_PIN=… npm run smoke` (the user types the PIN in their own shell, e.g. `! PRESENTER_PIN=… npm run smoke`). Expected: `All smoke checks passed.` Fix anything that fails before continuing.
 4. Run `PRESENTER_PIN=… npm run loadtest`. Expected: `Load test passed.`, median submit latency well under 1 s.
 5. `npm run dev`, open `http://localhost:5173/#/board` and, in another browser profile, `http://localhost:5173/`: run one round end to end (drawer unlock, open, play, close, reveal bots, replay, hide, back to lobby).
 6. **Confirm with the user** before creating the **public** GitHub repo `surveillance-game` and pushing `main`. Then: add repository variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; set Pages → Source → GitHub Actions; check the workflow run and open the deployed URL (player and `#/board`).
-7. Clear test data in the SQL editor: `truncate rounds, plays restart identity;`.
+7. Clear test data in the SQL editor: `truncate rounds, plays;` (no `restart identity`: round ids must keep increasing, because browsers remember the last round id they joined).
 8. Dry run with 2–3 colleagues on laptops (by Nov 9, code freeze); clear data again afterwards.

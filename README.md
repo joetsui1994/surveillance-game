@@ -34,7 +34,7 @@ Design: `docs/superpowers/specs/2026-11-02-multiplayer-design.md`
 
 **One-time setup**
 
-1. Create a Supabase project. In its SQL editor, run `supabase/schema.sql`, then `select set_presenter_pin('…');` (at least 6 characters; keep it out of the repo).
+1. Create a Supabase project. In its SQL editor, run `supabase/schema.sql`, then `select set_presenter_pin('…');` (use a long random passphrase, at least 10 characters; keep it out of the repo).
 2. Copy `.env.example` to `.env.local` and fill in the project URL and **anon** key (Project Settings → API).
 3. For the deployed site, add the same two values as GitHub repository **variables** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, and set Pages → Source to "GitHub Actions". `.github/workflows/deploy.yml` tests, builds and deploys every push to `main`.
 
@@ -46,7 +46,7 @@ PRESENTER_PIN=… npm run smoke          # presenter, submission rules, realtime
 PRESENTER_PIN=… npm run loadtest       # 30 simulated players (-- --players N)
 ```
 
-Both live scripts refuse to run while a round is open (add `-- --force`). Before the workshop, clear test data in the SQL editor: `truncate rounds, plays restart identity;`.
+Both live scripts refuse to run while a round is open (add `-- --force` to close it first). Before the workshop, clear test data in the SQL editor: `truncate rounds, plays;`. Don't add `restart identity`: round ids must keep increasing, because browsers remember the last round id they joined.
 
 ## Commands
 
