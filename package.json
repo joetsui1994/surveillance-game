@@ -13,7 +13,8 @@
     "data:calibrate": "node --disable-warning=ExperimentalWarning scripts/calibrate-prior.ts --write",
     "data:bots": "node --disable-warning=ExperimentalWarning scripts/build-bots.ts",
     "data": "npm run data:presets && npm run data:calibrate && npm run data:bots",
-    "validate": "node --disable-warning=ExperimentalWarning scripts/export-scenarios.ts && uv run --project offline python offline/validate_surrogate.py"
+    "validate": "node --disable-warning=ExperimentalWarning scripts/export-scenarios.ts && uv run --project offline python offline/validate_surrogate.py",
+    "test:sql": "supabase/test/run.sh"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
