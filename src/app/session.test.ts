@@ -76,6 +76,11 @@ describe('session', () => {
     expect(deserializeSession(null)).toBeNull();
     expect(deserializeSession('not json')).toBeNull();
     expect(deserializeSession(JSON.stringify({ ...s, picks: 'x' }))).toBeNull();
+    expect(deserializeSession(JSON.stringify({ ...s, roundId: 'x' }))).toBeNull();
+    const { roundId: _, ...legacy } = s;
+    expect(deserializeSession(JSON.stringify(legacy))).toEqual({ ...s, roundId: null });
+    const inRound = startSession(preset, outbreak, 3, 7);
+    expect(deserializeSession(serializeSession(inRound))?.roundId).toBe(7);
   });
 });
 

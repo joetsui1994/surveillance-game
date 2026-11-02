@@ -13,9 +13,11 @@ export interface Session {
   picks: number[];
   usedPredictions: boolean;
   usedUncertainty: boolean;
+  /** The presenter-led round this game belongs to; null for free play. */
+  roundId: number | null;
 }
 
-export function startSession(preset: Preset, outbreak: Outbreak, budget = preset.defaultBudget): Session {
+export function startSession(preset: Preset, outbreak: Outbreak, budget = preset.defaultBudget, roundId: number | null = null): Session {
   if (!(Number.isInteger(budget) && budget >= 1 && budget <= preset.maxBudget))
     throw new Error(`startSession: budget must be an integer in 1..${preset.maxBudget}`);
   return {
@@ -26,6 +28,7 @@ export function startSession(preset: Preset, outbreak: Outbreak, budget = preset
     picks: [],
     usedPredictions: false,
     usedUncertainty: false,
+    roundId,
   };
 }
 
@@ -90,7 +93,8 @@ export function serializeSession(s: Session): string {
 export function deserializeSession(text: string | null): Session | null {
   if (!text) return null;
   try {
-    const s = JSON.parse(text) as Session;
+    // Sessions saved before multiplayer have no roundId: they were free play.
+    const s = { roundId: null, ...JSON.parse(text) } as Session;
     const ok =
       typeof s.presetId === 'string' &&
       typeof s.outbreakId === 'string' &&
@@ -100,7 +104,8 @@ export function deserializeSession(text: string | null): Session | null {
       s.picks.every(Number.isInteger) &&
       s.picks.length <= s.budget &&
       typeof s.usedPredictions === 'boolean' &&
-      typeof s.usedUncertainty === 'boolean';
+      typeof s.usedUncertainty === 'boolean' &&
+      (s.roundId === null || Number.isInteger(s.roundId));
     return ok ? s : null;
   } catch {
     return null;
