@@ -16,6 +16,12 @@ export interface AucChartProps {
   series: ChartSeries[];
   /** Optional reference band (e.g. Random's 5–95%). */
   band?: { lo: (number | null)[]; hi: (number | null)[]; color: string };
+  /** Faint unlabelled lines drawn behind the series (e.g. every player's curve). */
+  background?: (number | null)[][];
+  /** Step to mark with a vertical line (e.g. the replay position). */
+  marker?: number;
+  title?: string;
+  subtitle?: string;
 }
 
 const W = 460;
@@ -26,10 +32,17 @@ const T = 8;
 const B = 204;
 
 /** AUC against number of tests, y fixed to [0.5, 1]. Legend above, direct labels right, hover crosshair. */
-export function AucChart({ series, band }: AucChartProps) {
+export function AucChart({
+  series,
+  band,
+  background = [],
+  marker,
+  title = "How good was the model's map after each test?",
+  subtitle = "AUC on untested locations (the paper's metric) · higher is better",
+}: AucChartProps) {
   const N = Math.max(1, Math.max(...series.map((s) => s.values.length)) - 1);
   // Axis starts at 0.5 (chance) unless some value is lower; then it extends down in steps of 0.1.
-  const all = [...series.flatMap((s) => s.values), ...(band?.lo ?? [])].filter((v): v is number => v !== null);
+  const all = [...series.flatMap((s) => s.values), ...(band?.lo ?? []), ...background.flat()].filter((v): v is number => v !== null);
   const yMin = Math.min(0.5, Math.floor(Math.min(...all, 0.5) * 10) / 10);
   const gridValues = Array.from({ length: Math.round((1 - yMin) * 10) + 1 }, (_, k) => +(yMin + k / 10).toFixed(1));
   const X = (t: number) => L + (t / N) * (R - L);
@@ -58,8 +71,8 @@ export function AucChart({ series, band }: AucChartProps) {
 
   return (
     <div className="chart">
-      <div className="chart-title">How good was the model's map after each test?</div>
-      <div className="chart-subtitle">AUC on untested locations (the paper's metric) · higher is better</div>
+      <div className="chart-title">{title}</div>
+      <div className="chart-subtitle">{subtitle}</div>
       <div className="legend" data-testid="legend">
         {[...series].reverse().map((s) => (
           <span key={s.key}>
@@ -95,6 +108,10 @@ export function AucChart({ series, band }: AucChartProps) {
               opacity={0.16}
             />
           )}
+          {background.map((values, k) => (
+            <path key={`bg${k}`} d={path(values)} fill="none" stroke="#0b0b0b" strokeOpacity={0.14} strokeWidth={1} strokeLinejoin="round" />
+          ))}
+          {marker !== undefined && <line data-testid="chart-marker" x1={X(marker)} x2={X(marker)} y1={T} y2={B} stroke="#ef6c00" strokeWidth={2} />}
           {series.map((s) => (
             <g key={s.key}>
               <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash} strokeLinejoin="round" strokeLinecap="round" />

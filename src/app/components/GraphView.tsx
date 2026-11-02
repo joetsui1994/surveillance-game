@@ -25,10 +25,12 @@ export interface GraphViewProps {
   onHover: (node: number | null) => void;
   /** Called when an untested node is clicked; omit to make the graph read-only. */
   onPick?: (node: number) => void;
+  /** Test order (1, 2, …) shown as a small badge beside tested nodes, e.g. in a replay. */
+  order?: Map<number, number>;
 }
 
 export function GraphView(props: GraphViewProps) {
-  const { graph, layout, tested, predictions, uncertainty, truth, wrong, hovered, onHover, onPick } = props;
+  const { graph, layout, tested, predictions, uncertainty, truth, wrong, hovered, onHover, onPick, order } = props;
   const { n, dist } = graph;
   const xy = (i: number): [number, number] => [PAD + layout[i][0] * (VIEW - 2 * PAD), PAD + layout[i][1] * (VIEW - 2 * PAD)];
   const hops = (i: number) => (hovered === null ? -1 : dist[hovered * n + i]);
@@ -76,6 +78,14 @@ export function GraphView(props: GraphViewProps) {
               <text x={x} y={y + 5} textAnchor="middle" fontSize={15} fontWeight={700} fill="#fff" pointerEvents="none">
                 {result === 1 ? '+' : '−'}
               </text>
+            )}
+            {order?.has(i) && (
+              <g pointerEvents="none" data-testid={`order-${i}`}>
+                <circle cx={x + R * 0.95} cy={y - R * 0.95} r={5.5} fill="#fff" stroke={COLORS.ink} strokeWidth={1} />
+                <text x={x + R * 0.95} y={y - R * 0.95 + 3} textAnchor="middle" fontSize={8} fontWeight={700} fill={COLORS.ink}>
+                  {order.get(i)}
+                </text>
+              </g>
             )}
             {!isTested && wrong?.has(i) && (
               <text data-testid={`wrong-${i}`} x={x} y={y + 5} textAnchor="middle" fontSize={14} fontWeight={700} fill={COLORS.ink} pointerEvents="none">
