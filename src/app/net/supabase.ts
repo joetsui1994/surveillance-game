@@ -89,7 +89,18 @@ function throwIfPinError(res: RpcResult): void {
 let channelCount = 0;
 const channelName = (base: string) => `${base}-${++channelCount}-${Math.random().toString(36).slice(2, 8)}`;
 
-/** Live data via Supabase. Every subscription reloads the full list on each change and on (re)connect. */
+/** Current players on a presence channel (first entry per key). */
+function presencePlayers(channel: RealtimeChannel): PresenceState[] {
+  return Object.values(channel.presenceState<PresenceState>())
+    .map((metas) => metas[0])
+    .filter((m) => m !== undefined)
+    .map(({ playerId, nickname, status, roundId }) => ({ playerId, nickname, status, roundId }));
+}
+
+const POLL_MS = 15_000;
+const RETRY_MS = 2000;
+
+/** Live data via Supabase. Every subscription reloads the full list on each change, on (re)connect and on a timer. */
 export class SupabaseRoundsApi implements RoundsApi {
   private presenceChannel: RealtimeChannel | null = null;
   private me: PresenceState | null = null;
@@ -100,21 +111,45 @@ export class SupabaseRoundsApi implements RoundsApi {
     this.sb = createClient(url, anonKey, { auth: { persistSession: false } });
   }
 
-  /** Load once, then reload on every change; a sequence number drops stale responses. */
+  /**
+   * Load now, then reload on every change, on (re)subscribe, on channel errors and every 15 s, so a dead
+   * WebSocket can't leave the list stale. A failed load is retried once after 2 s. Responses are numbered:
+   * one older than the result already shown is dropped, and so is an unchanged list (most polls), to spare re-renders.
+   */
   private live<T>(table: 'rounds' | 'plays', filter: string | undefined, load: () => PromiseLike<T[] | null>, cb: (rows: T[]) => void): Unsubscribe {
     let seq = 0;
-    const reload = async () => {
+    let shown = 0;
+    let stopped = false;
+    let last = '';
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const reload = async (retryOnFail = true) => {
       const mine = ++seq;
-      const rows = await load();
-      if (rows && mine === seq) cb(rows);
+      const rows = await Promise.resolve(load()).catch(() => null);
+      if (stopped || mine < shown) return;
+      if (rows) {
+        shown = mine;
+        const json = JSON.stringify(rows);
+        if (json !== last) cb(rows);
+        last = json;
+      } else if (retryOnFail) {
+        clearTimeout(retry);
+        retry = setTimeout(() => void reload(false), RETRY_MS);
+      }
     };
     const channel = this.sb
       .channel(channelName(table))
       .on('postgres_changes', { event: '*', schema: 'public', table, filter }, () => void reload())
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') void reload();
+        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') void reload();
       });
-    return () => void this.sb.removeChannel(channel);
+    const poll = setInterval(() => void reload(), POLL_MS);
+    void reload();
+    return () => {
+      stopped = true;
+      clearInterval(poll);
+      clearTimeout(retry);
+      void this.sb.removeChannel(channel);
+    };
   }
 
   onRounds(cb: (rounds: Round[]) => void): Unsubscribe {
@@ -152,7 +187,9 @@ export class SupabaseRoundsApi implements RoundsApi {
       p_picks: play.picks,
       p_used_predictions: play.usedPredictions,
       p_used_uncertainty: play.usedUncertainty,
-    });
+    })
+      // A hung request becomes a network error (status 0) after 8 s, so the player's retry loop moves on.
+      .abortSignal(AbortSignal.timeout(8000));
     if (res.error) throw new SubmitError(submitErrorKind(res), res.error.message);
   }
 
@@ -160,11 +197,7 @@ export class SupabaseRoundsApi implements RoundsApi {
     if (this.presenceChannel) return this.presenceChannel;
     const channel = this.sb.channel('players', { config: { presence: { key: channelName('p'), enabled: true } } });
     channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState<PresenceState>();
-      const players = Object.values(state)
-        .map((metas) => metas[0])
-        .filter((m) => m !== undefined)
-        .map(({ playerId, nickname, status, roundId }) => ({ playerId, nickname, status, roundId }));
+      const players = presencePlayers(channel);
       for (const cb of this.presenceListeners) cb(players);
     });
     channel.subscribe((status) => {
@@ -192,7 +225,9 @@ export class SupabaseRoundsApi implements RoundsApi {
 
   onPresence(cb: (players: PresenceState[]) => void): Unsubscribe {
     this.presenceListeners.add(cb);
-    this.channel();
+    // A listener added after the channel joined (e.g. a remounted board) would otherwise wait for the next sync.
+    const channel = this.channel();
+    if (channel.state === 'joined') cb(presencePlayers(channel));
     return () => this.presenceListeners.delete(cb);
   }
 
