@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clickUntested, playToEnd, presetFile, stubData } from '../test/harness.ts';
 import { App } from './App.tsx';
 import { FakeRoundsApi } from './net/fake.ts';
-import type { PresenceState } from './net/types.ts';
+import type { NewPlay, PresenceState } from './net/types.ts';
+import type { Submission } from './player/flow.ts';
+import { useSubmitter } from './player/hooks.ts';
 
 const preset = presetFile.presets[0];
 const roundOutbreak = preset.outbreaks.find((o) => o.split === 'round')!;
@@ -110,5 +112,23 @@ describe('player in a presenter-led round', () => {
     render(<App api={api} />);
     expect(await screen.findByText(/Result received/)).toBeTruthy();
     expect(api.plays).toHaveLength(1);
+  });
+});
+
+describe('useSubmitter', () => {
+  it('starts a new submission without the previous one\'s backoff', async () => {
+    const sent: number[] = [];
+    api.offline = true;
+    const submit = api.submitPlay.bind(api);
+    api.submitPlay = (p: NewPlay) => (sent.push(p.roundId), submit(p));
+    const sub = (roundId: number): Submission => ({
+      state: 'pending',
+      play: { ...cfg, roundId, playerId: 'p1', nickname: 'ada', picks: [1, 2, 3], usedPredictions: false, usedUncertainty: false },
+    });
+    const { result, rerender } = renderHook(({ s }) => useSubmitter(api, s, () => {}), { initialProps: { s: sub(1) } });
+    await waitFor(() => expect(result.current).toBe(1));
+    rerender({ s: sub(2) });
+    expect(result.current).toBe(0);
+    await waitFor(() => expect(sent).toContain(2), { timeout: 500 });
   });
 });

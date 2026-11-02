@@ -5,9 +5,13 @@ import { afterSubmit, presenceStatus, retryDelay, type Submission } from './flow
 
 /** Send a pending submission, retrying network failures with backoff. Returns the current failure streak. */
 export function useSubmitter(api: RoundsApi | null, submission: Submission | null, setSubmission: Dispatch<SetStateAction<Submission | null>>): number {
-  const [failures, setFailures] = useState(0);
+  // The streak belongs to one round's submission: a new one starts again from zero.
+  const roundId = submission?.play.roundId ?? null;
+  const [streak, setStreak] = useState<{ roundId: number | null; failures: number }>({ roundId: null, failures: 0 });
+  const failures = streak.roundId === roundId ? streak.failures : 0;
   useEffect(() => {
     if (!api || !submission || submission.state !== 'pending') return;
+    const id = submission.play.roundId;
     let cancelled = false;
     const timer = setTimeout(async () => {
       let error: SubmitErrorKind | null = null;
@@ -18,11 +22,11 @@ export function useSubmitter(api: RoundsApi | null, submission: Submission | nul
       }
       if (cancelled) return;
       if (error === 'network') {
-        setFailures((f) => f + 1);
+        setStreak((s) => ({ roundId: id, failures: (s.roundId === id ? s.failures : 0) + 1 }));
         return;
       }
-      setFailures(0);
-      setSubmission((s) => (s && s.state === 'pending' && s.play.roundId === submission.play.roundId ? afterSubmit(s, error) : s));
+      setStreak({ roundId: id, failures: 0 });
+      setSubmission((s) => (s && s.state === 'pending' && s.play.roundId === id ? afterSubmit(s, error) : s));
     }, failures === 0 ? 0 : retryDelay(failures));
     return () => {
       cancelled = true;

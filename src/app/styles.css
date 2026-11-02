@@ -114,6 +114,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
 /* Presenter drawer */
 .drawer { position: absolute; right: 14px; top: 56px; width: 300px; background: #fff; border: 2px solid var(--accent); border-radius: 8px; padding: 12px; font-size: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; gap: 8px; color: var(--ink); z-index: 10; }
+.drawer[hidden] { display: none; }
 .drawer form { display: flex; flex-direction: column; gap: 8px; }
 .drawer label { display: flex; flex-direction: column; gap: 3px; font-weight: 600; }
 .drawer label.check { flex-direction: row; align-items: center; gap: 6px; }

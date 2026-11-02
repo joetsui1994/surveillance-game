@@ -13,10 +13,12 @@ export interface PresenterDrawerProps {
   pin: string | null;
   onPin: (pin: string | null) => void;
   onClose: () => void;
+  /** Hidden rather than unmounted, so the choices below survive hiding the drawer. */
+  hidden?: boolean;
 }
 
 /** Presenter controls, unlocked with the PIN (kept for this tab only). */
-export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pin, onPin, onClose }: PresenterDrawerProps) {
+export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pin, onPin, onClose, hidden = false }: PresenterDrawerProps) {
   const [entry, setEntry] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,8 +29,11 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
   const [outbreakId, setOutbreakId] = useState(unused?.id ?? roundOutbreaks[0]?.id ?? '');
   const [budget, setBudget] = useState(preset?.defaultBudget ?? 10);
   const [metric, setMetric] = useState<RankMetric>('auc');
-  const open = openRound(rounds);
-  const nextNumber = Math.max(0, ...rounds.map((r) => r.number)) + 1;
+  // The round this drawer opened counts as open until the live list shows it closed, even if that list lags behind.
+  const [opened, setOpened] = useState<Round | null>(null);
+  const openedClosed = opened !== null && rounds.some((r) => r.id === opened.id && r.status === 'closed');
+  const open = openRound(rounds) ?? (opened && !openedClosed ? opened : null);
+  const nextNumber = Math.max(0, opened?.number ?? 0, ...rounds.map((r) => r.number)) + 1;
 
   const act = async (f: (pin: string) => Promise<unknown>) => {
     if (!pin) return;
@@ -38,7 +43,8 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
       await f(pin);
     } catch (e) {
       if (e instanceof PinError) onPin(null);
-      setError(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message === 'round_open' ? 'A round is already open. Close it first.' : message);
     } finally {
       setBusy(false);
     }
@@ -46,7 +52,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
 
   if (!pin) {
     return (
-      <aside className="drawer" data-testid="drawer">
+      <aside className="drawer" data-testid="drawer" hidden={hidden}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -78,7 +84,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
   }
 
   return (
-    <aside className="drawer" data-testid="drawer">
+    <aside className="drawer" data-testid="drawer" hidden={hidden}>
       <b>Presenter</b>
       <label>
         Network
@@ -127,7 +133,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
           disabled={busy || open !== null || !preset || !(Number.isInteger(budget) && budget >= 1 && budget <= preset.maxBudget)}
           onClick={() =>
             act(async (p) => {
-              await api.openRound(p, { presetId, outbreakId, budget, rankMetric: metric });
+              setOpened(await api.openRound(p, { presetId, outbreakId, budget, rankMetric: metric }));
               // Suggest the next outbreak for the following round.
               const k = roundOutbreaks.findIndex((o) => o.id === outbreakId);
               setOutbreakId(roundOutbreaks[(k + 1) % roundOutbreaks.length].id);

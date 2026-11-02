@@ -3,7 +3,7 @@ import { presetModel, type Outbreak, type PresetModel } from '../../core/presets
 import { AucChart } from '../components/AucChart.tsx';
 import { botResult, loadGameData, type GameData } from '../data.ts';
 import { usePresenceList, useRoundPlays, useRounds } from '../net/hooks.ts';
-import { latestRound, type Play, type PresenceState, type Round, type RoundsApi } from '../net/types.ts';
+import { latestRound, PinError, type Play, type PresenceState, type Round, type RoundsApi } from '../net/types.ts';
 import { FirstPickHeatmap } from './FirstPickHeatmap.tsx';
 import { Leaderboard } from './Leaderboard.tsx';
 import { PresenterDrawer } from './PresenterDrawer.tsx';
@@ -49,9 +49,13 @@ export function BoardApp({ api }: { api: RoundsApi | null }) {
   const rounds = useRounds(api);
   const players = usePresenceList(api);
   const latest = rounds ? latestRound(rounds) : null;
-  const plays = useRoundPlays(api, latest?.id ?? null);
+  // Resubscribe when the round closes, so the results start from a fresh load of every play.
+  const plays = useRoundPlays(api, latest?.id ?? null, latest?.status);
   const [dismissed, setDismissed] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Once opened, the drawer stays mounted (hidden when closed) so its choices survive hiding it.
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  if (drawerOpen && !drawerMounted) setDrawerMounted(true);
   const [pin, setPinState] = useState(loadPin);
   const [showBots, setShowBots] = useState(false);
   const [selected, setSelected] = useState<Row | null>(null);
@@ -81,14 +85,20 @@ export function BoardApp({ api }: { api: RoundsApi | null }) {
   }, [latest?.id]);
 
   const models = useMemo(() => new Map((data?.presets.presets ?? []).map((p) => [p.id, presetModel(p)])), [data]);
+  const model = latest ? (models.get(latest.presetId) ?? null) : null;
+  const outbreak = model?.preset.outbreaks.find((o) => o.id === latest?.outbreakId) ?? null;
+  // Scoring every play is the slow part of a render: only for results, and only when its inputs change.
+  const rows = useMemo(
+    () =>
+      data && latest?.status === 'closed' && model && outbreak ? leaderboardRows(model, outbreak, latest, plays ?? [], data.bots, showBots) : [],
+    [data, model, outbreak, latest, plays, showBots],
+  );
 
   if (!api) return <main className="message">Multiplayer is not configured for this build (no Supabase settings).</main>;
   if (error) return <main className="message">Could not load the game: {error}</main>;
   if (!data || !rounds) return <main className="message">Connecting…</main>;
 
   const phase = boardPhase(latest, dismissed);
-  const model = latest ? (models.get(latest.presetId) ?? null) : null;
-  const outbreak = model?.preset.outbreaks.find((o) => o.id === latest?.outbreakId) ?? null;
 
   return (
     <main className="board">
@@ -113,19 +123,27 @@ export function BoardApp({ api }: { api: RoundsApi | null }) {
           round={latest}
           model={model}
           outbreak={outbreak}
-          rows={leaderboardRows(model, outbreak, latest, plays ?? [], data.bots, showBots)}
+          rows={rows}
           plays={plays ?? []}
           le={botResult(data.bots, latest.presetId, latest.outbreakId, 'LE').auc.mean.slice(0, latest.budget + 1)}
           showBots={showBots}
           selected={selected}
           onSelect={setSelected}
-          onHide={pin && drawerOpen ? (row) => row.play && void api.hidePlay(pin, row.play.id).catch(() => setPin(null)) : undefined}
+          onHide={
+            pin && drawerOpen
+              ? (row) =>
+                  row.play &&
+                  // Only a wrong PIN locks the drawer; any other failure can simply be retried.
+                  void api.hidePlay(pin, row.play.id).catch((e: unknown) => e instanceof PinError && setPin(null))
+              : undefined
+          }
           onDismiss={() => setDismissed(latest.id)}
         />
       )}
 
-      {drawerOpen && (
+      {drawerMounted && (
         <PresenterDrawer
+          hidden={!drawerOpen}
           api={api}
           presets={data.presets.presets}
           rounds={rounds}

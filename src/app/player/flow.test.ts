@@ -29,6 +29,11 @@ describe('playerView', () => {
     expect(playerView(session([5], 9), open2, 9)).toEqual({ kind: 'stale' });
     expect(playerView(session([5], 2), null, 2)).toEqual({ kind: 'play', round: null, banner: null });
   });
+  it('a round id reused for a different game (database reset) is stale', () => {
+    expect(playerView(session([5], 2), [round(1, 'closed'), { ...round(2), outbreakId: 'ob01' }], 2)).toEqual({ kind: 'stale' });
+    expect(playerView(session([5, 6], 2), [round(1, 'closed'), { ...round(2), presetId: 'ring' }], 2)).toEqual({ kind: 'stale' });
+    expect(playerView(session([5], 2), [round(1, 'closed'), { ...round(2), budget: 3 }], 2)).toEqual({ kind: 'stale' });
+  });
 });
 
 describe('shouldAutoJoin', () => {

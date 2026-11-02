@@ -8,7 +8,7 @@ export type PlayerView =
   | { kind: 'practice-results'; banner: Round | null }
   | { kind: 'round-results'; round: Round }
   | { kind: 'round-missed'; round: Round }
-  /** The stored game's round no longer exists (e.g. the database was reset): drop the game. */
+  /** The stored game's round no longer exists, or its id now belongs to a different game (database reset): drop the game. */
   | { kind: 'stale' };
 
 /** The open round, unless this player has already joined it. */
@@ -26,7 +26,9 @@ export function playerView(session: Session | null, rounds: Round[] | null, last
   // Rounds not loaded yet: show the board as it was; results wait for the round's status.
   if (rounds === null) return { kind: 'play', round: null, banner: null };
   const round = rounds.find((r) => r.id === session.roundId);
-  if (!round) return { kind: 'stale' };
+  if (!round || round.presetId !== session.presetId || round.outbreakId !== session.outbreakId || round.budget !== session.budget) {
+    return { kind: 'stale' };
+  }
   if (isFinished(session)) return { kind: 'round-results', round };
   return round.status === 'open' ? { kind: 'play', round, banner: null } : { kind: 'round-missed', round };
 }

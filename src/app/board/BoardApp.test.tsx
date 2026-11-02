@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetFile, stubData } from '../../test/harness.ts';
 import { FakeRoundsApi } from '../net/fake.ts';
-import type { NewPlay } from '../net/types.ts';
+import type { NewPlay, PresenceState, Round } from '../net/types.ts';
 import { isBoardRoute } from '../Root.tsx';
 import { BoardApp, boardPhase, joinUrl } from './BoardApp.tsx';
 
@@ -106,6 +106,12 @@ describe('BoardApp', () => {
     fireEvent.click(within(drawer).getByRole('button', { name: 'Hide drawer' }));
     expect(screen.queryByRole('button', { name: 'Hide ada (2)' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Presenter controls (P)' }));
+    // A failed request (not a wrong PIN) keeps the drawer unlocked so the presenter can try again.
+    const hidePlay = api.hidePlay.bind(api);
+    api.hidePlay = () => Promise.reject(new Error('Failed to fetch'));
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Hide ada (2)' })));
+    expect(within(drawer).getByRole('button', { name: 'Lock' })).toBeTruthy();
+    api.hidePlay = hidePlay;
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Hide ada (2)' })));
     expect(api.plays.find((p) => p.playerId === 'p2')?.hidden).toBe(true);
     expect(within(screen.getByTestId('leaderboard')).queryByText('ada (2)')).toBeNull();
@@ -113,5 +119,74 @@ describe('BoardApp', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back to lobby' }));
     expect(screen.getByTestId('qr')).toBeTruthy();
     expect(within(screen.getByTestId('drawer')).getByRole('button', { name: 'Open round 2' })).toBeTruthy();
+  });
+
+  const unlock = async () => {
+    fireEvent.keyDown(window, { key: 'p' });
+    const drawer = screen.getByTestId('drawer');
+    fireEvent.change(within(drawer).getByLabelText('PIN'), { target: { value: '1234' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Unlock' }));
+    await within(drawer).findByRole('button', { name: 'Open round 1' });
+    return drawer;
+  };
+
+  it('keeps the drawer settings while it is hidden', async () => {
+    render(<BoardApp api={api} />);
+    await screen.findByTestId('qr');
+    const drawer = await unlock();
+    fireEvent.change(within(drawer).getByLabelText('Budget (tests)'), { target: { value: '7' } });
+    fireEvent.change(within(drawer).getByLabelText('Rank by'), { target: { value: 'accuracy' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Hide drawer' }));
+    expect(screen.queryByRole('button', { name: 'Open round 1' })).toBeNull();
+    fireEvent.keyDown(window, { key: 'p' });
+    expect((within(screen.getByTestId('drawer')).getByLabelText('Budget (tests)') as HTMLInputElement).value).toBe('7');
+    expect((within(screen.getByTestId('drawer')).getByLabelText('Rank by') as HTMLSelectElement).value).toBe('accuracy');
+  });
+
+  it('treats a round it opened as open before the live list catches up, and reports round_open inline', async () => {
+    // Freeze the board's view of the rounds after the first load (a slow or dropped connection).
+    let frozen = false;
+    const onRounds = api.onRounds.bind(api);
+    api.onRounds = (cb: (r: Round[]) => void) => onRounds((r) => !frozen && cb(r));
+    render(<BoardApp api={api} />);
+    await screen.findByTestId('qr');
+    const drawer = await unlock();
+    frozen = true;
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Open round 1' })));
+    expect(api.rounds).toHaveLength(1);
+    expect((within(drawer).getByRole('button', { name: 'Open round 2' }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Close round 1' })));
+    expect(api.rounds[0].status).toBe('closed');
+
+    // Someone else opened a round the board hasn't seen yet: the database refuses, and the drawer says why.
+    frozen = false;
+    await act(() => api.closeRound('1234', 1));
+    frozen = true;
+    await act(() => api.openRound('1234', { presetId: preset.id, outbreakId: ob.id, budget: 3, rankMetric: 'auc' }).then(() => undefined));
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Open round 2' })));
+    expect(within(drawer).getByText(/already open/)).toBeTruthy();
+    expect(api.rounds).toHaveLength(2);
+  });
+
+  it('reloads the plays when the round closes', async () => {
+    const onPlays = vi.spyOn(api, 'onPlays');
+    render(<BoardApp api={api} />);
+    await act(() => api.openRound('1234', { presetId: preset.id, outbreakId: ob.id, budget: 3, rankMetric: 'auc' }).then(() => undefined));
+    const before = onPlays.mock.calls.length;
+    await act(() => api.closeRound('1234', 1));
+    expect(onPlays.mock.calls.length).toBeGreaterThan(before);
+    expect(onPlays.mock.calls.at(-1)?.[0]).toBe(1);
+  });
+
+  it('shows only well-formed presence entries, with nicknames clamped to 24 characters', async () => {
+    render(<BoardApp api={api} />);
+    await screen.findByTestId('qr');
+    act(() => {
+      api.joinPresence({ playerId: 'p1', nickname: `  ${'x'.repeat(30)}  `, status: 'lobby', roundId: null });
+      api.joinPresence({ playerId: 'p2', nickname: 'eve', status: 'admin', roundId: null } as unknown as PresenceState);
+    });
+    expect(screen.getByTestId('joined-count').textContent).toBe('1');
+    expect(screen.getByText('x'.repeat(24))).toBeTruthy();
+    expect(screen.queryByText('eve')).toBeNull();
   });
 });
