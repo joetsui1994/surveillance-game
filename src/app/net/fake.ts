@@ -93,8 +93,9 @@ export class FakeRoundsApi implements RoundsApi {
 
   async openRound(pin: string, cfg: RoundConfig): Promise<Round> {
     this.requirePin(pin);
+    // Like the database: never close a live round by accident.
+    if (this.rounds.some((r) => r.status === 'open')) throw new Error('round_open');
     const now = this.now();
-    for (const r of this.rounds) if (r.status === 'open') Object.assign(r, { status: 'closed', closedAt: now });
     const round: Round = { ...cfg, id: this.rounds.length + 1, number: this.rounds.length + 1, status: 'open', openedAt: now, closedAt: null };
     this.rounds.push(round);
     this.emitRounds();

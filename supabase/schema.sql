@@ -1,6 +1,7 @@
 -- Surveillance Game: multiplayer schema. Paste into the Supabase SQL editor and run (safe to re-run).
--- Then set the presenter PIN once:  select set_presenter_pin('your-pin');
--- After a dry run, start fresh with:  truncate rounds, plays restart identity;
+-- Then set the presenter PIN once (at least 10 characters; use a long random passphrase):  select set_presenter_pin('…');
+-- After a dry run, start fresh with:  truncate rounds, plays;
+-- (Keep the ids counting up: no "restart identity". Browsers remember the last round id they joined.)
 
 create extension if not exists pgcrypto with schema extensions;
 
@@ -70,8 +71,8 @@ $$;
 create or replace function public.set_presenter_pin(new_pin text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 begin
-  if char_length(coalesce(new_pin, '')) < 6 then raise exception 'PIN must be at least 6 characters'; end if;
-  insert into presenter_secret (id, pin_hash) values (1, crypt(new_pin, gen_salt('bf')))
+  if char_length(coalesce(new_pin, '')) < 10 then raise exception 'PIN must be at least 10 characters'; end if;
+  insert into presenter_secret (id, pin_hash) values (1, crypt(new_pin, gen_salt('bf', 10)))
   on conflict (id) do update set pin_hash = excluded.pin_hash;
 end $$;
 
@@ -81,11 +82,15 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare r rounds;
 begin
   perform require_pin(pin);
-  update rounds set status = 'closed', closed_at = now() where status = 'open';
+  -- Never close a live round by accident: the presenter closes it first.
+  if exists (select 1 from rounds where status = 'open') then raise exception 'round_open'; end if;
   insert into rounds (number, preset_id, outbreak_id, budget, rank_metric)
   values ((select coalesce(max(number), 0) + 1 from rounds), p_preset_id, p_outbreak_id, p_budget, p_rank_metric)
   returning * into r;
   return r;
+exception when unique_violation then
+  -- A concurrent open got in first (rounds_one_open).
+  raise exception 'round_open';
 end $$;
 
 create or replace function public.close_round(pin text, p_round_id bigint) returns void
@@ -114,6 +119,7 @@ begin
   select * into r from rounds where id = p_round_id for share;
   if not found or r.status <> 'open' then raise exception 'round_closed'; end if;
   if p_preset_id is distinct from r.preset_id or p_outbreak_id is distinct from r.outbreak_id or p_budget is distinct from r.budget
+     or coalesce(array_ndims(p_picks), 0) <> 1
      or coalesce(cardinality(p_picks), 0) <> r.budget
      or (select count(distinct x) from unnest(p_picks) as x where x >= 0) <> r.budget
      or char_length(btrim(coalesce(p_nickname, ''))) not between 1 and 24

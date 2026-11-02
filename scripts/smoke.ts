@@ -1,6 +1,7 @@
 // Smoke test against the real Supabase project: presenter functions, submission rules, realtime and presence.
 // Usage: PRESENTER_PIN=… npm run smoke   (add -- --force if a round is open; it will be closed)
-// Leaves a few test rounds behind; clear them before the workshop with: truncate rounds, plays restart identity;
+// Leaves a few test rounds behind; clear them before the workshop with: truncate rounds, plays;
+// (no "restart identity": ids must keep increasing because browsers remember the last round id they joined)
 import { PinError, SubmitError, type Play, type PresenceState, type Round } from '../src/app/net/types.ts';
 import { check, env, expectEqual, failed, guardOpenRound, newApi, testOutbreak, waitFor } from './live.ts';
 
@@ -10,7 +11,7 @@ const player = newApi();
 const { preset, outbreak, nodes } = testOutbreak();
 const kind = (p: Promise<unknown>) => p.then(() => 'ok', (e: unknown) => (e instanceof SubmitError ? e.kind : `unexpected: ${String(e)}`));
 
-const lastNumber = Math.max(0, ...(await guardOpenRound(presenter)).map((x) => x.number));
+const lastNumber = Math.max(0, ...(await guardOpenRound(presenter, pin)).map((x) => x.number));
 console.log('Smoke test');
 let round: Round | null = null;
 
@@ -31,6 +32,10 @@ if (!round) {
   process.exit(1);
 }
 const r = round as Round;
+await check('a second round cannot be opened over the open one', async () => {
+  const err = await presenter.openRound(pin, { presetId: preset.id, outbreakId: outbreak.id, budget: 3, rankMetric: 'auc' }).catch((e: unknown) => e);
+  expectEqual(err instanceof Error ? err.message : String(err), 'round_open');
+});
 const play = { roundId: r.id, presetId: preset.id, outbreakId: outbreak.id, budget: 3, playerId: crypto.randomUUID(), nickname: 'smoke', picks: nodes.slice(0, 3), usedPredictions: true, usedUncertainty: false };
 
 await check('presence: the board sees a joining player', async () => {

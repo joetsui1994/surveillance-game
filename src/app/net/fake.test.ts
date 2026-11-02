@@ -9,11 +9,14 @@ const play = (over: Partial<NewPlay> = {}): NewPlay => ({
 const kind = (p: Promise<unknown>) => p.then(() => 'ok', (e: SubmitError) => e.kind);
 
 describe('FakeRoundsApi', () => {
-  it('opens a round, closing any open one, and numbers rounds in order', async () => {
+  it('refuses to open a round while one is open, and numbers rounds in order', async () => {
     const api = new FakeRoundsApi();
     let seen: Round[] = [];
     api.onRounds((r) => (seen = r));
     await api.openRound('1234', cfg);
+    await expect(api.openRound('1234', { ...cfg, outbreakId: 'ob01' })).rejects.toThrow('round_open');
+    expect(seen.map((r) => [r.number, r.status])).toEqual([[1, 'open']]);
+    await api.closeRound('1234', 1);
     await api.openRound('1234', { ...cfg, outbreakId: 'ob01' });
     expect(seen.map((r) => [r.number, r.status])).toEqual([[1, 'closed'], [2, 'open']]);
     expect(openRound(seen)?.outbreakId).toBe('ob01');

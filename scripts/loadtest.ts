@@ -14,7 +14,7 @@ const N = arg('players', 30);
 const budget = 10;
 const board = newApi();
 const { preset, outbreak, nodes } = testOutbreak();
-await guardOpenRound(board);
+await guardOpenRound(board, pin);
 
 console.log(`Load test: ${N} players`);
 const round = await board.openRound(pin, { presetId: preset.id, outbreakId: outbreak.id, budget, rankMetric: 'auc' });

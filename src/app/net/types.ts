@@ -80,7 +80,7 @@ export interface RoundsApi {
   joinPresence(me: PresenceState): PresenceHandle;
   onPresence(cb: (players: PresenceState[]) => void): Unsubscribe;
   checkPin(pin: string): Promise<boolean>;
-  /** Presenter actions reject with PinError on a wrong PIN. Opening a round closes any open one. */
+  /** Presenter actions reject with PinError on a wrong PIN. Opening rejects with Error('round_open') while a round is open. */
   openRound(pin: string, cfg: RoundConfig): Promise<Round>;
   closeRound(pin: string, roundId: number): Promise<void>;
   hidePlay(pin: string, playId: number): Promise<void>;

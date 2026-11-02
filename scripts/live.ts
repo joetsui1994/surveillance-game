@@ -38,14 +38,18 @@ export function waitFor<T>(subscribe: (cb: (v: T) => void) => () => void, check:
   });
 }
 
-/** Refuse to run while a real round is open, unless --force: these scripts open and close rounds. Returns the rounds so far. */
-export async function guardOpenRound(api: RoundsApi): Promise<Round[]> {
+/**
+ * Refuse to run while a real round is open, unless --force (then close it: a round can't be opened over an open one).
+ * Returns the rounds so far.
+ */
+export async function guardOpenRound(api: RoundsApi, pin: string): Promise<Round[]> {
   const rounds = await waitFor<Round[]>((cb) => api.onRounds(cb), () => true);
   const open = openRound(rounds);
   if (open && !process.argv.includes('--force')) {
     console.error(`Round ${open.number} is open. These scripts would close it. Re-run with --force if that's OK.`);
     process.exit(2);
   }
+  if (open) await api.closeRound(pin, open.id);
   return rounds;
 }
 
