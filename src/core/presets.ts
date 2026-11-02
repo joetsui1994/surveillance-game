@@ -4,8 +4,8 @@ import type { Scenario } from './replay.ts';
 
 export interface Outbreak {
   id: string;
-  /** 'game' outbreaks are played; 'calib' outbreaks are only used to calibrate the prior. */
-  split: 'game' | 'calib';
+  /** 'round' outbreaks are for presenter-led rounds, 'free' for free play; 'calib' only calibrate the prior. */
+  split: 'round' | 'free' | 'calib';
   truth: (0 | 1)[];
   seedNode: number;
   prevalence: number;
@@ -45,6 +45,9 @@ export function parsePresetFile(json: unknown): PresetFile {
   }
   return file;
 }
+
+/** Outbreaks that are played (rounds and free play), i.e. everything bots are computed for. */
+export const playedOutbreaks = (preset: Preset): Outbreak[] => preset.outbreaks.filter((o) => o.split !== 'calib');
 
 export interface PresetModel {
   preset: Preset;

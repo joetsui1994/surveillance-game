@@ -24,10 +24,10 @@ export function botResult(bots: BotsFile, presetId: string, outbreakId: string, 
   return r;
 }
 
-/** A random 'game' outbreak, avoiding `previousId` when there is a choice. */
+/** A random free-play outbreak, avoiding `previousId` when there is a choice. */
 export function chooseOutbreak(preset: Preset, previousId: string | null, rng: () => number = Math.random): Outbreak {
-  const games = preset.outbreaks.filter((o) => o.split === 'game');
-  if (games.length === 0) throw new Error(`${preset.id}: no game outbreaks`);
+  const games = preset.outbreaks.filter((o) => o.split === 'free');
+  if (games.length === 0) throw new Error(`${preset.id}: no free-play outbreaks`);
   const pool = games.length > 1 ? games.filter((o) => o.id !== previousId) : games;
   return pool[Math.floor(rng() * pool.length)];
 }

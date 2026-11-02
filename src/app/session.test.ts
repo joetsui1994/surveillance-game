@@ -9,7 +9,7 @@ import {
 } from './session.ts';
 
 const preset = parsePresetFile(JSON.parse(readFileSync('public/data/presets.json', 'utf8'))).presets[0];
-const outbreak = preset.outbreaks.find((o) => o.split === 'game')!;
+const outbreak = preset.outbreaks.find((o) => o.split === 'free')!;
 const freeNode = (exclude: number[]) => [...Array(preset.n).keys()].find((i) => !exclude.includes(i))!;
 
 describe('session', () => {
@@ -81,7 +81,7 @@ describe('session', () => {
 
 describe('isValidFor', () => {
   const s = pick(startSession(preset, outbreak, 3), freeNode([outbreak.seedNode]), preset.n);
-  const other = preset.outbreaks.find((o) => o.split === 'game' && o.id !== outbreak.id && o.seedNode !== outbreak.seedNode)!;
+  const other = preset.outbreaks.find((o) => o.split === 'free' && o.id !== outbreak.id && o.seedNode !== outbreak.seedNode)!;
 
   it('accepts a session that matches the current data', () => {
     expect(isValidFor(s, preset, outbreak)).toBe(true);

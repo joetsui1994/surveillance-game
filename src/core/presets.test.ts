@@ -11,7 +11,7 @@ const tiny: Preset = {
   defaultBudget: 1,
   maxBudget: 2,
   prior: { alpha: 0.9, tau: 1, b0Var: 1 },
-  outbreaks: [{ id: 'ob00', split: 'game', truth: [1, 1, 0, 0], seedNode: 0, prevalence: 0.5 }],
+  outbreaks: [{ id: 'ob00', split: 'round', truth: [1, 1, 0, 0], seedNode: 0, prevalence: 0.5 }],
 };
 
 describe('parsePresetFile', () => {

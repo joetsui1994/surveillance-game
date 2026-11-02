@@ -1,7 +1,7 @@
 // Export observation snapshots (from LE runs) plus the browser surrogate's predictions, for MCMC validation.
 // Writes offline/out/scenarios.json; consumed by offline/validate_surrogate.py.
 import { resolve } from 'node:path';
-import { presetModel, scenarioFor } from '../src/core/presets.ts';
+import { playedOutbreaks, presetModel, scenarioFor } from '../src/core/presets.ts';
 import { runPolicy } from '../src/core/replay.ts';
 import { fitLaplace, type Observation } from '../src/core/surrogate.ts';
 import { makeRng } from '../src/core/rng.ts';
@@ -12,7 +12,7 @@ const scenarios = [];
 for (const preset of loadPresets().presets) {
   const model = presetModel(preset);
   const steps = [0, Math.round(preset.defaultBudget / 2), preset.defaultBudget];
-  for (const ob of preset.outbreaks.filter((o) => o.split === 'game').slice(0, OUTBREAKS_PER_PRESET)) {
+  for (const ob of playedOutbreaks(preset).slice(0, OUTBREAKS_PER_PRESET)) {
     const tr = runPolicy(scenarioFor(model, ob), 'LE', preset.defaultBudget, makeRng(0));
     for (const t of steps) {
       const obs: Observation[] = [ob.seedNode, ...tr.picks.slice(0, t)].map((node) => ({ node, y: ob.truth[node] }));

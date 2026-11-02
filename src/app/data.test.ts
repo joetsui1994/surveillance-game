@@ -9,13 +9,20 @@ const preset = parsePresetFile(JSON.parse(readFileSync('public/data/presets.json
 const bots = JSON.parse(readFileSync('public/data/bots.json', 'utf8')) as BotsFile;
 
 describe('chooseOutbreak', () => {
-  it('only returns game outbreaks and never repeats the previous one', () => {
+  it('only returns free-play outbreaks and never repeats the previous one', () => {
     const rng = makeRng(1);
+    const previous = preset.outbreaks.find((o) => o.split === 'free')!.id;
     for (let k = 0; k < 50; k++) {
-      const o = chooseOutbreak(preset, 'ob00', rng);
-      expect(o.split).toBe('game');
-      expect(o.id).not.toBe('ob00');
+      const o = chooseOutbreak(preset, previous, rng);
+      expect(o.split).toBe('free');
+      expect(o.id).not.toBe(previous);
     }
+  });
+
+  it('presets.json has 5 round and 5 free outbreaks, and bots cover all of them', () => {
+    expect(preset.outbreaks.filter((o) => o.split === 'round')).toHaveLength(5);
+    expect(preset.outbreaks.filter((o) => o.split === 'free')).toHaveLength(5);
+    for (const o of preset.outbreaks.filter((o) => o.split !== 'calib')) expect(() => botResult(bots, preset.id, o.id, 'LE')).not.toThrow();
   });
 });
 

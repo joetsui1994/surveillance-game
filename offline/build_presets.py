@@ -34,8 +34,15 @@ PRESETS = {
 }
 
 
-def simulate_outbreaks(g, params, count, game_count, seed, prevalence_range=(0.25, 0.5), max_tries=10_000):
-    """Simulate `count` distinct outbreaks; the first `game_count` are played, the rest calibrate the prior."""
+def split_for(k, round_count, free_count):
+    """Outbreak k's role: presenter-led rounds first, then free play, then prior calibration."""
+    if k < round_count:
+        return "round"
+    return "free" if k < round_count + free_count else "calib"
+
+
+def simulate_outbreaks(g, params, count, round_count, free_count, seed, prevalence_range=(0.25, 0.5), max_tries=10_000):
+    """Simulate `count` distinct outbreaks, labelled by split_for (round, free, then calib)."""
     n = g.number_of_nodes()
     rng = np.random.default_rng(seed)
     outbreaks = []
@@ -52,7 +59,7 @@ def simulate_outbreaks(g, params, count, game_count, seed, prevalence_range=(0.2
             continue
         outbreaks.append({
             "id": f"ob{len(outbreaks):02d}",
-            "split": "game" if len(outbreaks) < game_count else "calib",
+            "split": split_for(len(outbreaks), round_count, free_count),
             "truth": truth,
             "seedNode": int(rng.integers(0, n)),
             "prevalence": round(prevalence, 4),
@@ -62,7 +69,7 @@ def simulate_outbreaks(g, params, count, game_count, seed, prevalence_range=(0.2
     return outbreaks
 
 
-def build(out_path, game_outbreaks, calib_outbreaks, seed):
+def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks, seed):
     presets = []
     for i, (pid, (name, builder, sim_params)) in enumerate(PRESETS.items()):
         g, layout, communities = builder()
@@ -79,7 +86,7 @@ def build(out_path, game_outbreaks, calib_outbreaks, seed):
             "defaultBudget": round(0.1 * n),
             "maxBudget": round(0.3 * n),
             "prior": DEFAULT_PRIOR,
-            "outbreaks": simulate_outbreaks(g, sim_params, game_outbreaks + calib_outbreaks, game_outbreaks, seed + i),
+            "outbreaks": simulate_outbreaks(g, sim_params, round_outbreaks + free_outbreaks + calib_outbreaks, round_outbreaks, free_outbreaks, seed + i),
         })
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps({"version": 1, "presets": presets}))
@@ -91,8 +98,9 @@ def build(out_path, game_outbreaks, calib_outbreaks, seed):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[1] / "public" / "data" / "presets.json")
-    ap.add_argument("--game-outbreaks", type=int, default=10)
+    ap.add_argument("--round-outbreaks", type=int, default=5)
+    ap.add_argument("--free-outbreaks", type=int, default=5)
     ap.add_argument("--calib-outbreaks", type=int, default=20)
     ap.add_argument("--seed", type=int, default=20261112)
     args = ap.parse_args()
-    build(args.out, args.game_outbreaks, args.calib_outbreaks, args.seed)
+    build(args.out, args.round_outbreaks, args.free_outbreaks, args.calib_outbreaks, args.seed)
