@@ -54,4 +54,15 @@ describe('GraphView', () => {
     expect(screen.getByTestId('node-1').getAttribute('stroke-width')).toBe('0.8');
     expect(document.querySelector('[opacity="0.25"]')).toBeNull();
   });
+
+  it('draws + and − as strokes centred on the node', () => {
+    render(<GraphView {...base} tested={new Map<number, 0 | 1>([[4, 1], [0, 0]])} />);
+    const centre = (i: number) => screen.getByTestId(`node-${i}`);
+    const plus = screen.getByTestId('symbol-4').getAttribute('d')!;
+    const minus = screen.getByTestId('symbol-0').getAttribute('d')!;
+    const [cx4, cy4] = [Number(centre(4).getAttribute('cx')), Number(centre(4).getAttribute('cy'))];
+    const [cx0, cy0] = [Number(centre(0).getAttribute('cx')), Number(centre(0).getAttribute('cy'))];
+    expect(minus).toBe(`M${cx0 - 4.5},${cy0}h9`);
+    expect(plus).toBe(`M${cx4 - 4.5},${cy4}h9M${cx4},${cy4 - 4.5}v9`);
+  });
 });

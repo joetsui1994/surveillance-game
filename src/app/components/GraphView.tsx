@@ -6,6 +6,8 @@ const PAD = 25;
 const R = 9;
 /** Outline of the hovered node; its own edges are drawn darker and thicker. Nothing else changes on hover. */
 const HOVER_OUTLINE = 3.5;
+/** Half-length of the strokes of the + / − drawn on tested nodes. */
+const SYMBOL = 4.5;
 
 export interface GraphViewProps {
   graph: Graph;
@@ -84,9 +86,15 @@ export function GraphView(props: GraphViewProps) {
               onClick={clickable ? () => onPick(i) : undefined}
             />
             {isTested && (
-              <text x={x} y={y + 5} textAnchor="middle" fontSize={15} fontWeight={700} fill="#fff" pointerEvents="none">
-                {result === 1 ? '+' : '−'}
-              </text>
+              // Drawn as strokes rather than text, so + and − sit exactly at the node centre in any font.
+              <path
+                data-testid={`symbol-${i}`}
+                d={result === 1 ? `M${x - SYMBOL},${y}h${2 * SYMBOL}M${x},${y - SYMBOL}v${2 * SYMBOL}` : `M${x - SYMBOL},${y}h${2 * SYMBOL}`}
+                stroke="#fff"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
             )}
             {order?.has(i) && (
               <g pointerEvents="none" data-testid={`order-${i}`}>
