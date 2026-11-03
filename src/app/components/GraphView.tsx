@@ -1,9 +1,9 @@
 import type { Graph } from '../../core/graph.ts';
 import { COLORS, predictionColor, ringStyle } from '../scales.ts';
 
-const VIEW = 330;
-const PAD = 25;
-const R = 9;
+export const VIEW = 330;
+export const PAD = 25;
+export const R = 9;
 /** Outline of the hovered node; its own edges are drawn darker and thicker. Nothing else changes on hover. */
 const HOVER_OUTLINE = 3.5;
 /** Half-length of the strokes of the + / − drawn on tested nodes. */

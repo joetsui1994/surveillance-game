@@ -26,8 +26,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .lead { line-height: 1.5; margin: 0; }
 .field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
 .field input { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink); background: var(--surface); }
-.presets { display: flex; gap: 12px; flex-wrap: wrap; }
-.preset-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 180px; text-align: left; }
+.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.preset-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; }
 .preset-card.selected { border: 2px solid var(--accent); }
 
 /* Shared bar */
@@ -144,3 +144,9 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .toggles { display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; }
 .commentary { margin: 0; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; min-height: 2.8em; }
 .board .label { font-size: 16px; }
+
+/* Layout editor (dev only, #/layout) */
+.layout-actions { display: flex; gap: 10px; align-items: center; }
+.layout-stats { padding: 0 20px; }
+.layout-stats .bad { color: #d03b3b; font-weight: 700; }
+.layout-canvas { display: block; width: min(92vw, 78vh); margin: 0 auto; touch-action: none; user-select: none; }
