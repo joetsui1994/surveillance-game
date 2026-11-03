@@ -99,17 +99,25 @@ def main():
     ap.add_argument("--pick", type=int, help="save candidate N from the last search (re-runs it if missing)")
     args = ap.parse_args()
     cache = OUT_DIR / f"{args.id}.json"
-    if args.pick is not None and cache.exists():
-        g, top = NETWORKS[args.id].build(), json.loads(cache.read_text())
+    g = NETWORKS[args.id].build()
+    # The cache is {"edges", "candidates"}; one for another graph (or an old bare list) is stale.
+    cached = json.loads(cache.read_text()) if cache.exists() else None
+    fresh = isinstance(cached, dict) and cached.get("edges") == sorted_edges(g)
+    if args.pick is not None and fresh:
+        top = cached["candidates"]
     else:
+        if args.pick is not None and cached is not None:
+            print(f"Re-searching {args.id}: the graph changed since the last search")
         g, top = search(args.id)
         sheet = OUT_DIR / f"{args.id}.png"
         contact_sheet(args.id, g, top, sheet)
-        cache.write_text(json.dumps(top))
+        cache.write_text(json.dumps({"edges": sorted_edges(g), "candidates": top}))
         print(f"Wrote {sheet}")
         for i, c in enumerate(top):
             print(f"  #{i:<2} {c['penalties']}  {c['source']}")
     if args.pick is not None:
+        if not 0 <= args.pick < len(top):
+            raise SystemExit(f"--pick {args.pick} is out of range: choose 0..{len(top) - 1}")
         c = top[args.pick]
         save_layout(args.id, g, c["layout"], f"search:{c['source']}")
         print(f"Saved #{args.pick} to offline/layouts/{args.id}.json")
