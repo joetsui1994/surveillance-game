@@ -147,6 +147,17 @@ describe('BoardApp', () => {
     expect((within(screen.getByTestId('drawer')).getByLabelText('Rank by') as HTMLSelectElement).value).toBe('accuracy');
   });
 
+  it('preselects the first unused round outbreak when switching network', async () => {
+    render(<BoardApp api={api} />);
+    await screen.findByTestId('qr');
+    const drawer = await unlock();
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Open round 1' })));
+    const network = within(drawer).getByLabelText('Network');
+    fireEvent.change(network, { target: { value: presetFile.presets[1].id } });
+    fireEvent.change(network, { target: { value: preset.id } });
+    expect((within(drawer).getByLabelText('Outbreak') as HTMLSelectElement).value).toBe(roundOutbreaks[1].id);
+  });
+
   it('treats a round it opened as open before the live list catches up, and reports round_open inline', async () => {
     // Freeze the board's view of the rounds after the first load (a slow or dropped connection).
     let frozen = false;

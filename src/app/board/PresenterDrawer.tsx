@@ -17,6 +17,13 @@ export interface PresenterDrawerProps {
   hidden?: boolean;
 }
 
+/** The first round outbreak of `preset` no round has used yet, else its first round outbreak. */
+export function firstUnusedOutbreak(preset: Preset | undefined, rounds: Round[]): string {
+  const roundOutbreaks = preset?.outbreaks.filter((o) => o.split === 'round') ?? [];
+  const unused = roundOutbreaks.find((o) => !rounds.some((r) => r.presetId === preset!.id && r.outbreakId === o.id));
+  return unused?.id ?? roundOutbreaks[0]?.id ?? '';
+}
+
 /** Presenter controls, unlocked with the PIN (kept for this tab only). */
 export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pin, onPin, onClose, hidden = false }: PresenterDrawerProps) {
   const [entry, setEntry] = useState('');
@@ -25,8 +32,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
   const [presetId, setPresetId] = useState(presets[0]?.id ?? '');
   const preset = presets.find((p) => p.id === presetId);
   const roundOutbreaks = preset?.outbreaks.filter((o) => o.split === 'round') ?? [];
-  const unused = roundOutbreaks.find((o) => !rounds.some((r) => r.presetId === presetId && r.outbreakId === o.id));
-  const [outbreakId, setOutbreakId] = useState(unused?.id ?? roundOutbreaks[0]?.id ?? '');
+  const [outbreakId, setOutbreakId] = useState(() => firstUnusedOutbreak(preset, rounds));
   const [budget, setBudget] = useState(preset?.defaultBudget ?? 10);
   const [metric, setMetric] = useState<RankMetric>('auc');
   // The round this drawer opened counts as open until the live list shows it closed, even if that list lags behind.
@@ -93,7 +99,7 @@ export function PresenterDrawer({ api, presets, rounds, showBots, onShowBots, pi
           onChange={(e) => {
             const next = presets.find((p) => p.id === e.target.value);
             setPresetId(e.target.value);
-            setOutbreakId(next?.outbreaks.find((o) => o.split === 'round')?.id ?? '');
+            setOutbreakId(firstUnusedOutbreak(next, rounds));
             setBudget(next?.defaultBudget ?? 10);
           }}
         >
