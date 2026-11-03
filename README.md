@@ -62,7 +62,7 @@ Both live scripts refuse to run while a round is open (add `-- --force` to close
 
 ## Networks and layouts
 
-Networks are defined in `offline/networks.py`: the 10×10 grid, a hub network (`ba40`) and two three-town networks (`sbm45hi`, `sbm45lo`). Graphs come from fixed seeds. Non-grid layouts are files in `offline/layouts/<id>.json` (positions plus the edges they were made for), so rebuilding data never moves a node.
+Networks are defined in `offline/networks.py`: the 10×10 grid, Three towns (`sbm45hi`) and two five-town networks modelled on the paper's high- and low-modularity SBMs (`sb5hi`, `sb5lo`: same towns, 5 vs 12 links between them). Graphs come from fixed seeds. Non-grid layouts are files in `offline/layouts/<id>.json` (positions plus the edges they were made for), so rebuilding data never moves a node.
 
 1. `npm run data:layout -- <id>`, look at the contact sheet, then `npm run data:layout -- <id> --pick N`.
 2. Optional: `npm run dev`, open `#/layout`, drag nodes (faults show in red), **Save**. The editor exists only in dev builds.

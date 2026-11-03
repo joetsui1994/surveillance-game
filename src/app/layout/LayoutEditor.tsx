@@ -6,7 +6,7 @@ import { PAD, R, VIEW } from '../components/GraphView.tsx';
 import { loadGameData } from '../data.ts';
 import { COLORS } from '../scales.ts';
 
-const TOWN_COLORS = ['#6a8fd0', '#d08a6a', '#7ab37a'];
+const TOWN_COLORS = ['#6a8fd0', '#d08a6a', '#7ab37a', '#b07ac0', '#c9a640'];
 const FAULT = '#d03b3b';
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 

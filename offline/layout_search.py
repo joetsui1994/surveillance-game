@@ -26,15 +26,23 @@ REFINE = 16  # raw candidates refined
 TOP = 12  # candidates on the contact sheet
 
 
+def town_centres(k):
+    """Where each town goes: a triangle for three towns, otherwise a regular polygon."""
+    if k == 3:
+        return [(0.5, 0.0), (0.0, 0.9), (1.0, 0.9)], 0.32
+    angles = [np.pi / 2 + 2 * np.pi * i / k for i in range(k)]
+    return [(0.5 + 0.5 * np.cos(a), 0.5 - 0.5 * np.sin(a)) for a in angles], 0.2
+
+
 def town_layout(g, blocks, seed):
-    """Spring-lay each town separately at the corners of a triangle, then relax the whole graph briefly."""
-    centres = [(0.5, 0.0), (0.0, 0.9), (1.0, 0.9)]
+    """Spring-lay each town separately at its own centre, then relax the whole graph briefly."""
+    centres, scale = town_centres(max(blocks) + 1)
     pos = {}
     for b, (cx, cy) in enumerate(centres):
         nodes = [v for v in g.nodes if blocks[v] == b]
         sub = nx.spring_layout(g.subgraph(nodes), seed=seed, iterations=200)
         for v, (x, y) in sub.items():
-            pos[v] = (cx + 0.32 * x, cy + 0.32 * y)
+            pos[v] = (cx + scale * x, cy + scale * y)
     return nx.spring_layout(g, pos=pos, seed=seed, iterations=15, k=1.5 / np.sqrt(g.number_of_nodes()))
 
 

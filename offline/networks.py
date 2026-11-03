@@ -17,7 +17,7 @@ LAYOUT_DIR = Path(__file__).resolve().parent / "layouts"
 PX_PER_UNIT = 280
 MIN_NODE_GAP_PX = 28  # centre to centre; uncertainty rings reach ~15 px from the centre
 MIN_EDGE_CLEARANCE_PX = 14  # a node's centre to any edge it isn't part of
-TOWN_MARGIN_PX = 60  # a town's node must be this much nearer its own town's centre than any other
+TOWN_MARGIN_PX = 60  # with three towns, a node must be this much nearer its own town's centre than any other (scaled by 3/k for k towns)
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ class Network:
     sim: dict  # simulate_binary_outbreak params
     seed: int  # outbreak RNG seed
     grid: tuple[int, int] | None = None  # rows, cols: layout computed rather than read from a file
+    sizes: tuple[int, ...] | None = None  # SBM community sizes (nodes are numbered community by community)
     towns: bool = False  # lay communities out in separate regions
 
 
@@ -39,22 +40,33 @@ def grid_layout(rows, cols):
     return [[(i % cols) / (cols - 1), (i // cols) / (rows - 1)] for i in range(rows * cols)]
 
 
-SBM_SIZES = [15, 15, 15]
+THREE_TOWNS = (15, 15, 15)
+# The paper's five SBM communities (25, 21, 41, 30, 43 of 160 nodes), scaled to 45 nodes. Both five-town
+# networks share the within-town density and differ only in links between towns, close to the paper's
+# modularity: Q ≈ 0.68 with 5 links (paper's high: 0.72) and Q ≈ 0.62 with 12 (paper's low: 0.62).
+FIVE_TOWNS = (7, 6, 12, 8, 12)
+FIVE_TOWNS_P_IN = 0.3
 
 
-def sbm_blocks():
-    return [b for b, size in enumerate(SBM_SIZES) for _ in range(size)]
+def blocks_of(sizes):
+    return [b for b, size in enumerate(sizes) for _ in range(size)]
 
 
-def bridge_counts(g):
-    """Edges between each pair of SBM blocks, in pair order (0,1), (0,2), (1,2)."""
-    block = sbm_blocks()
-    pairs = [(a, b) for a in range(len(SBM_SIZES)) for b in range(a + 1, len(SBM_SIZES))]
+def bridge_counts(g, sizes):
+    """Edges between each pair of SBM blocks, in pair order (0,1), (0,2), …, (k-2,k-1)."""
+    block = blocks_of(sizes)
+    pairs = [(a, b) for a in range(len(sizes)) for b in range(a + 1, len(sizes))]
     counts = dict.fromkeys(pairs, 0)
     for u, v in g.edges:
         if block[u] != block[v]:
             counts[tuple(sorted((block[u], block[v])))] += 1
     return [counts[p] for p in pairs]
+
+
+def towns_connected(g, sizes):
+    """True if every SBM block is connected on its own."""
+    block = blocks_of(sizes)
+    return all(nx.is_connected(g.subgraph([v for v in g if block[v] == b])) for b in range(len(sizes)))
 
 
 def first_seed(make, accept, tries=1000):
@@ -66,47 +78,45 @@ def first_seed(make, accept, tries=1000):
     raise RuntimeError("no acceptable graph seed found")
 
 
-def sbm(p_in, p_out, accept=lambda g: True):
-    k = len(SBM_SIZES)
+def sbm(sizes, p_in, p_out, accept=lambda g: True):
+    k = len(sizes)
     probs = [[p_in if i == j else p_out for j in range(k)] for i in range(k)]
-    g = first_seed(lambda s: nx.stochastic_block_model(SBM_SIZES, probs, seed=s), accept)
+    g = first_seed(lambda s: nx.stochastic_block_model(list(sizes), probs, seed=s), accept)
     return nx.Graph(g.edges)  # drop the SBM's graph/node attributes
-
-
-def hub_graph(n, extra):
-    """A Barabási–Albert tree (m = 1) plus `extra` triangle-closing edges: hubs, with a few short loops."""
-    def make(seed):
-        g = nx.barabasi_albert_graph(n, 1, seed=seed)
-        rng = np.random.default_rng(seed)
-        added = 0
-        while added < extra:
-            u = int(rng.integers(n))
-            v = int(rng.choice(list(g[u])))
-            w = int(rng.choice(list(g[v])))
-            if w != u and not g.has_edge(u, w):
-                g.add_edge(u, w)
-                added += 1
-        return g
-
-    return first_seed(make, lambda g: True)
 
 
 NETWORKS: dict[str, Network] = {
     "grid10": Network("10×10 grid", lambda: grid_graph(10, 10), {"end_time": 8, "transmission_p": 0.25, "initial_infected_num": 1}, 20261112, grid=(10, 10)),
-    "ba40": Network("Hub network", lambda: hub_graph(40, 12), {"end_time": 6, "transmission_p": 0.3, "initial_infected_num": 1}, 20261113),
     "sbm45hi": Network(
         "Three towns",
-        lambda: sbm(0.2, 0.01, accept=lambda g: all(1 <= c <= 3 for c in bridge_counts(g))),
+        lambda: sbm(THREE_TOWNS, 0.2, 0.01, accept=lambda g: all(1 <= c <= 3 for c in bridge_counts(g, THREE_TOWNS))),
         {"end_time": 6, "transmission_p": 0.3, "initial_infected_num": 1},
         20261114,
+        sizes=THREE_TOWNS,
         towns=True,
     ),
-    "sbm45lo": Network("Mixed towns", lambda: sbm(0.2, 0.04), {"end_time": 4, "transmission_p": 0.3, "initial_infected_num": 1}, 20261115),
+    "sb5hi": Network(
+        "Five towns, few links",
+        lambda: sbm(FIVE_TOWNS, FIVE_TOWNS_P_IN, 0.004, accept=lambda g: towns_connected(g, FIVE_TOWNS) and sum(bridge_counts(g, FIVE_TOWNS)) <= 5),
+        {"end_time": 6, "transmission_p": 0.3, "initial_infected_num": 1},
+        20261116,
+        sizes=FIVE_TOWNS,
+        towns=True,
+    ),
+    "sb5lo": Network(
+        "Five towns, many links",
+        lambda: sbm(FIVE_TOWNS, FIVE_TOWNS_P_IN, 0.02, accept=lambda g: towns_connected(g, FIVE_TOWNS)),
+        {"end_time": 6, "transmission_p": 0.3, "initial_infected_num": 1},
+        20261117,
+        sizes=FIVE_TOWNS,
+        towns=True,
+    ),
 }
 
 
 def communities(pid):
-    return sbm_blocks() if pid.startswith("sbm") else None
+    sizes = NETWORKS[pid].sizes
+    return blocks_of(sizes) if sizes else None
 
 
 def sorted_edges(g):

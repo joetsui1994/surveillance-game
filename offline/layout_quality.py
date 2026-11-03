@@ -68,7 +68,7 @@ class Geometry:
         d = np.linalg.norm(px[:, None] - centres[None], axis=-1)
         own = d[np.arange(self.n), np.searchsorted(ks, self.communities)]
         other = np.where(ks[None] == self.communities[:, None], np.inf, d).min(axis=1)
-        return int((own + TOWN_MARGIN_PX > other).sum())
+        return int((own + TOWN_MARGIN_PX * 3 / len(ks) > other).sum())
 
     def cost(self, layout):
         """Scalar to minimise: hard faults dominate, then crossings, then uneven edges."""

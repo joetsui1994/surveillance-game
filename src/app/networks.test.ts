@@ -11,8 +11,8 @@ const presets = parsePresetFile(JSON.parse(readFileSync('public/data/presets.jso
 const bots = JSON.parse(readFileSync('public/data/bots.json', 'utf8')) as BotsFile;
 
 describe('shipped networks', () => {
-  it('are the grid, the hub network and the two town networks, in that order', () => {
-    expect(presets.map((p) => p.id)).toEqual(['grid10', 'ba40', 'sbm45hi', 'sbm45lo']);
+  it('are the grid, Three towns and the two five-town networks, in that order', () => {
+    expect(presets.map((p) => p.id)).toEqual(['grid10', 'sbm45hi', 'sb5hi', 'sb5lo']);
   });
 
   describe.each(presets.map((p) => [p.id, p] as const))('%s', (_, preset) => {
@@ -37,8 +37,8 @@ describe('shipped networks', () => {
       expect(faults.onEdge).toEqual([]);
     });
 
-    it('labels communities only on the town networks', () => {
-      expect(preset.communities === null).toBe(!preset.id.startsWith('sbm'));
+    it('labels communities on every network except the grid', () => {
+      expect(preset.communities === null).toBe(preset.id === 'grid10');
     });
   });
 });
