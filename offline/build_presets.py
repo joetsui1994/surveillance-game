@@ -73,6 +73,7 @@ def previous_priors(out_path):
 def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
     previous = previous_priors(out_path)
     presets = []
+    calibrated = {}  # id -> prior carried over from the previous file and not the default
     for pid, net in NETWORKS.items():
         g = net.build()
         n = g.number_of_nodes()
@@ -87,7 +88,9 @@ def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
         outbreaks = simulate_outbreaks(g, net.sim, round_outbreaks + free_outbreaks + calib_outbreaks, round_outbreaks, free_outbreaks, net.seed)
         # Keep a calibrated prior while the graph and outbreaks are unchanged (e.g. after a layout edit).
         old = previous.get(pid)
-        prior = old["prior"] if old and old["edges"] == edges and old["outbreaks"] == outbreaks else DEFAULT_PRIOR
+        carried = bool(old) and old["edges"] == edges and old["outbreaks"] == outbreaks
+        prior = old["prior"] if carried else DEFAULT_PRIOR
+        calibrated[pid] = carried and prior != DEFAULT_PRIOR
         presets.append({
             "id": pid,
             "name": net.name,
@@ -104,7 +107,7 @@ def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
     out_path.write_text(json.dumps({"version": 1, "presets": presets}))
     for p in presets:
         prev = [o["prevalence"] for o in p["outbreaks"]]
-        kept = "kept calibrated prior" if p["prior"] is not DEFAULT_PRIOR else "default prior: run npm run data:calibrate"
+        kept = "kept calibrated prior" if calibrated[p["id"]] else "default prior: run npm run data:calibrate"
         print(f"{p['id']}: n={p['n']} edges={len(p['edges'])} outbreaks={len(prev)} prevalence {min(prev):.2f}-{max(prev):.2f} ({kept})")
 
 
