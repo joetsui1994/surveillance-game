@@ -4,6 +4,7 @@ import type { BotsFile } from '../core/bots.ts';
 import { layoutFaults } from '../core/layoutQuality.ts';
 import { POLICIES } from '../core/policies.ts';
 import { parsePresetFile } from '../core/presets.ts';
+import { presetFingerprint } from '../../scripts/io.ts';
 import { botResult } from './data.ts';
 
 const presets = parsePresetFile(JSON.parse(readFileSync('public/data/presets.json', 'utf8'))).presets;
@@ -23,6 +24,10 @@ describe('shipped networks', () => {
     it('has every bot for every played outbreak', () => {
       for (const o of preset.outbreaks.filter((o) => o.split !== 'calib'))
         for (const policy of POLICIES) expect(() => botResult(bots, preset.id, o.id, policy)).not.toThrow();
+    });
+
+    it('has bots computed from this preset', () => {
+      expect(bots.fingerprints?.[preset.id], 'bots.json is stale: run npm run data:bots').toBe(presetFingerprint(preset));
     });
 
     it('has a layout in [0, 1]² with no overlapping nodes or nodes on edges', () => {

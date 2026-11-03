@@ -21,6 +21,8 @@ export interface BotsFile {
   version: 1;
   /** presetId → outbreakId → one result per policy. */
   presets: Record<string, Record<string, BotResult[]>>;
+  /** presetId → presetFingerprint of the preset the results were computed from. */
+  fingerprints?: Record<string, string>;
 }
 
 /** Linear-interpolation quantile of an ascending-sorted array. */

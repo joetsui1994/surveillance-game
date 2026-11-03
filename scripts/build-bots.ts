@@ -4,15 +4,17 @@ import { runPolicy, type Trajectory } from '../src/core/replay.ts';
 import { makeRng } from '../src/core/rng.ts';
 import { summarise, type BotResult, type BotsFile } from '../src/core/bots.ts';
 import type { PolicyName } from '../src/core/policies.ts';
-import { BOTS_PATH, loadPresets, writeJson } from './io.ts';
+import { BOTS_PATH, loadPresets, presetFingerprint, writeJson } from './io.ts';
 
 /** Model-driven policies run once (ties are rare after the first few steps); policies that are random
  *  among many equal candidates (DC on a grid: all interior nodes have degree 4) are averaged. */
 const RUNS: Record<PolicyName, number> = { LE: 1, NE: 1, BALD: 1, DC: 200, RI: 200, RAND: 200 };
 
-const out: BotsFile = { version: 1, presets: {} };
+const fingerprints: Record<string, string> = {};
+const out: BotsFile = { version: 1, fingerprints, presets: {} };
 for (const preset of loadPresets().presets) {
   const model = presetModel(preset);
+  fingerprints[preset.id] = presetFingerprint(preset);
   out.presets[preset.id] = {};
   const finals: Record<string, { auc: number[]; acc: number[] }> = {};
   for (const ob of playedOutbreaks(preset)) {
