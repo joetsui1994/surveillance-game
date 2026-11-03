@@ -17,6 +17,9 @@ export default function LayoutEditor() {
   const [dragging, setDragging] = useState<number | null>(null);
   const [towns, setTowns] = useState(false);
   const [status, setStatus] = useState('');
+  // Any drag since the last load or save; bump `loads` to re-read the saved file.
+  const [dirty, setDirty] = useState(false);
+  const [loads, setLoads] = useState(0);
   const svg = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -29,16 +32,33 @@ export default function LayoutEditor() {
   }, []);
 
   const preset = presets?.find((p) => p.id === id) ?? null;
+  // Edit the saved layout file (presets.json may lag behind it); draw the preset's edges, which must match the file's.
   useEffect(() => {
-    if (preset) setLayout(preset.layout.map(([x, y]): Point => [x, y]));
+    if (!preset) return;
+    let live = true;
+    setLayout([]);
+    setDirty(false);
     setStatus('');
-  }, [preset]);
+    fetch(`/__layout/${preset.id}`)
+      .then(async (res) => {
+        const body = (await res.json()) as { edges?: [number, number][]; layout?: Point[]; error?: string };
+        if (!live) return;
+        if (!res.ok) setStatus(`Not loaded: ${body.error}`);
+        else if (JSON.stringify(body.edges) !== JSON.stringify(preset.edges))
+          setStatus(`offline/layouts/${preset.id}.json has different edges from presets.json. Run npm run data:presets first.`);
+        else setLayout(body.layout!);
+      })
+      .catch((e: unknown) => live && setStatus(`Not loaded: ${String(e)}`));
+    return () => {
+      live = false;
+    };
+  }, [preset, loads]);
 
   const faults = useMemo(() => (preset && layout.length === preset.n ? layoutFaults(layout, preset.edges) : null), [preset, layout]);
-  if (!presets || !preset || !faults) return <main className="message">{status || 'Loading…'}</main>;
+  if (!presets || !preset) return <main className="message">{status || 'Loading…'}</main>;
 
-  const badNodes = new Set([...faults.close.flat(), ...faults.onEdge.map(([i]) => i)]);
-  const badEdges = new Set([...faults.onEdge.map(([, e]) => e), ...faults.crossings.flat()]);
+  const badNodes = new Set(faults ? [...faults.close.flat(), ...faults.onEdge.map(([i]) => i)] : []);
+  const badEdges = new Set(faults ? [...faults.onEdge.map(([, e]) => e), ...faults.crossings.flat()] : []);
   const xy = ([x, y]: Point): Point => [PAD + x * (VIEW - 2 * PAD), PAD + y * (VIEW - 2 * PAD)];
 
   const toLayout = (e: React.PointerEvent): Point => {
@@ -52,11 +72,17 @@ export default function LayoutEditor() {
     if (dragging === null) return;
     const p = toLayout(e);
     setLayout((l) => l.map((q, i) => (i === dragging ? p : q)));
+    setDirty(true);
   };
   const save = async () => {
     setStatus('Saving…');
-    const res = await fetch('/__layout/save', { method: 'POST', body: JSON.stringify({ id: preset.id, layout }) });
+    const res = await fetch('/__layout/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: preset.id, layout }),
+    });
     const body = (await res.json()) as { path?: string; error?: string };
+    if (res.ok) setDirty(false);
     setStatus(res.ok ? `Saved to ${body.path}. Run npm run data:presets to apply it to the game.` : `Not saved: ${body.error}`);
   };
 
@@ -65,7 +91,7 @@ export default function LayoutEditor() {
       <header className="bar">
         <div>
           <b>Layout editor</b> (dev only) ·{' '}
-          <select value={preset.id} onChange={(e) => setId(e.target.value)} aria-label="Network">
+          <select value={preset.id} onChange={(e) => (!dirty || window.confirm('Discard unsaved changes?')) && setId(e.target.value)} aria-label="Network">
             {presets.map((p) => (
               <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
             ))}
@@ -77,47 +103,54 @@ export default function LayoutEditor() {
               <input type="checkbox" checked={towns} onChange={(e) => setTowns(e.target.checked)} /> Colour by community
             </label>
           )}
-          <button onClick={() => setLayout(preset.layout.map(([x, y]): Point => [x, y]))}>Revert</button>
-          <button className="primary" onClick={save}>Save</button>
+          <button onClick={() => setLoads((k) => k + 1)}>Revert</button>
+          <button className="primary" onClick={save} disabled={!faults}>Save</button>
         </div>
       </header>
       <p className="layout-stats" data-testid="layout-stats">
-        <span className={faults.close.length ? 'bad' : ''}>{faults.close.length} overlapping pairs</span> ·{' '}
-        <span className={faults.onEdge.length ? 'bad' : ''}>{faults.onEdge.length} nodes on edges</span> · {faults.crossings.length} crossings
-        {status && <> · {status}</>}
+        {faults && (
+          <>
+            <span className={faults.close.length ? 'bad' : ''}>{faults.close.length} overlapping pairs</span> ·{' '}
+            <span className={faults.onEdge.length ? 'bad' : ''}>{faults.onEdge.length} nodes on edges</span> · {faults.crossings.length} crossings
+            {status && <> · </>}
+          </>
+        )}
+        {status || (!faults && 'Loading…')}
       </p>
-      <svg
-        ref={svg}
-        viewBox={`0 0 ${VIEW} ${VIEW}`}
-        className="layout-canvas"
-        onPointerMove={onMove}
-        onPointerUp={() => setDragging(null)}
-        onPointerLeave={() => setDragging(null)}
-      >
-        {preset.edges.map(([a, b], e) => {
-          const [x1, y1] = xy(layout[a]);
-          const [x2, y2] = xy(layout[b]);
-          return <line key={e} x1={x1} y1={y1} x2={x2} y2={y2} stroke={badEdges.has(e) ? FAULT : COLORS.edge} strokeWidth={1.5} />;
-        })}
-        {layout.map((p, i) => {
-          const [x, y] = xy(p);
-          const fill = towns && preset.communities ? TOWN_COLORS[preset.communities[i] % TOWN_COLORS.length] : COLORS.unknown;
-          return (
-            <circle
-              key={i}
-              data-testid={`node-${i}`}
-              cx={x}
-              cy={y}
-              r={R}
-              fill={fill}
-              stroke={badNodes.has(i) ? FAULT : COLORS.outline}
-              strokeWidth={badNodes.has(i) ? 2.5 : 0.8}
-              style={{ cursor: 'grab' }}
-              onPointerDown={() => setDragging(i)}
-            />
-          );
-        })}
-      </svg>
+      {faults && (
+        <svg
+          ref={svg}
+          viewBox={`0 0 ${VIEW} ${VIEW}`}
+          className="layout-canvas"
+          onPointerMove={onMove}
+          onPointerUp={() => setDragging(null)}
+          onPointerLeave={() => setDragging(null)}
+        >
+          {preset.edges.map(([a, b], e) => {
+            const [x1, y1] = xy(layout[a]);
+            const [x2, y2] = xy(layout[b]);
+            return <line key={e} x1={x1} y1={y1} x2={x2} y2={y2} stroke={badEdges.has(e) ? FAULT : COLORS.edge} strokeWidth={1.5} />;
+          })}
+          {layout.map((p, i) => {
+            const [x, y] = xy(p);
+            const fill = towns && preset.communities ? TOWN_COLORS[preset.communities[i] % TOWN_COLORS.length] : COLORS.unknown;
+            return (
+              <circle
+                key={i}
+                data-testid={`node-${i}`}
+                cx={x}
+                cy={y}
+                r={R}
+                fill={fill}
+                stroke={badNodes.has(i) ? FAULT : COLORS.outline}
+                strokeWidth={badNodes.has(i) ? 2.5 : 0.8}
+                style={{ cursor: 'grab' }}
+                onPointerDown={() => setDragging(i)}
+              />
+            );
+          })}
+        </svg>
+      )}
     </main>
   );
 }
