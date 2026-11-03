@@ -619,8 +619,9 @@ Expected `data:bots` summary (AUC after the default budget):
 Expected MD5s:
 ```
 0a994f5f3920e92e2777e3edb3967778 public/data/bots.json
-f203c821aeb8a31ccb2bc67df504fa59 public/data/presets.json
 ```
+
+The `presets.json` MD5 is checked after Step 3. Its bytes depend on which step wrote it last: `data:calibrate` writes JavaScript's JSON spacing and `data:presets` writes Python's, but the content is the same either way.
 
 - [ ] **Step 3: Check that the grid is unchanged and a layout-only rebuild keeps priors**
 ```bash
