@@ -12,6 +12,9 @@ from pathlib import Path
 import networkx as nx
 import numpy as np
 
+from layout_quality import penalties
+from networks import NETWORKS, communities, network_layout, sorted_edges
+
 # The paper repo is expected to sit next to this app (override with SURVEILLANCE_REPO).
 REPO_CODE = Path(os.environ.get("SURVEILLANCE_REPO", Path(__file__).resolve().parents[2] / "optimal-disease-surveillance-AL")) / "code"
 sys.path.insert(0, str(REPO_CODE))
@@ -20,18 +23,9 @@ from binary_prevalence.outbreak_simulation.base import simulate_binary_outbreak 
 DEFAULT_PRIOR = {"alpha": 0.9, "tau": 1.0, "b0Var": 1.0}
 
 
-def grid_preset(rows, cols):
-    g = nx.grid_2d_graph(rows, cols)
-    mapping = {(r, c): r * cols + c for r, c in g.nodes}
-    g = nx.relabel_nodes(g, mapping)
-    layout = [[(i % cols) / (cols - 1), (i // cols) / (rows - 1)] for i in range(rows * cols)]
-    return g, layout, None
-
-
-# id -> (name, builder, outbreak simulation params)
-PRESETS = {
-    "grid10": ("10×10 grid", lambda: grid_preset(10, 10), {"end_time": 8, "transmission_p": 0.25, "initial_infected_num": 1}),
-}
+def budgets(n):
+    """Default and maximum tests: 10% and 30% of nodes, with at least 6 by default on small networks."""
+    return max(6, round(0.1 * n)), round(0.3 * n)
 
 
 def split_for(k, round_count, free_count):
@@ -69,30 +63,49 @@ def simulate_outbreaks(g, params, count, round_count, free_count, seed, prevalen
     return outbreaks
 
 
-def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks, seed):
+def previous_priors(out_path):
+    """Calibrated priors from the current presets.json, keyed by id, with the edges and outbreaks they were fitted to."""
+    if not out_path.exists():
+        return {}
+    return {p["id"]: p for p in json.loads(out_path.read_text())["presets"]}
+
+
+def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
+    previous = previous_priors(out_path)
     presets = []
-    for i, (pid, (name, builder, sim_params)) in enumerate(PRESETS.items()):
-        g, layout, communities = builder()
+    for pid, net in NETWORKS.items():
+        g = net.build()
         n = g.number_of_nodes()
         assert sorted(g.nodes) == list(range(n)), "nodes must be labelled 0..n-1"
         assert nx.is_connected(g), f"{pid} must be connected"
+        layout = network_layout(pid, g)
+        edges = sorted_edges(g)
+        pen = penalties(layout, edges)
+        if pen["close"] or pen["onEdge"]:
+            raise SystemExit(f"{pid}: layout has {pen['close']} close node pairs and {pen['onEdge']} nodes on edges; fix it in #/layout")
+        default_budget, max_budget = budgets(n)
+        outbreaks = simulate_outbreaks(g, net.sim, round_outbreaks + free_outbreaks + calib_outbreaks, round_outbreaks, free_outbreaks, net.seed)
+        # Keep a calibrated prior while the graph and outbreaks are unchanged (e.g. after a layout edit).
+        old = previous.get(pid)
+        prior = old["prior"] if old and old["edges"] == edges and old["outbreaks"] == outbreaks else DEFAULT_PRIOR
         presets.append({
             "id": pid,
-            "name": name,
+            "name": net.name,
             "n": n,
-            "edges": sorted([min(a, b), max(a, b)] for a, b in g.edges),
+            "edges": edges,
             "layout": layout,
-            "communities": communities,
-            "defaultBudget": round(0.1 * n),
-            "maxBudget": round(0.3 * n),
-            "prior": DEFAULT_PRIOR,
-            "outbreaks": simulate_outbreaks(g, sim_params, round_outbreaks + free_outbreaks + calib_outbreaks, round_outbreaks, free_outbreaks, seed + i),
+            "communities": communities(pid),
+            "defaultBudget": default_budget,
+            "maxBudget": max_budget,
+            "prior": prior,
+            "outbreaks": outbreaks,
         })
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps({"version": 1, "presets": presets}))
     for p in presets:
         prev = [o["prevalence"] for o in p["outbreaks"]]
-        print(f"{p['id']}: n={p['n']} edges={len(p['edges'])} outbreaks={len(prev)} prevalence {min(prev):.2f}-{max(prev):.2f}")
+        kept = "kept calibrated prior" if p["prior"] is not DEFAULT_PRIOR else "default prior: run npm run data:calibrate"
+        print(f"{p['id']}: n={p['n']} edges={len(p['edges'])} outbreaks={len(prev)} prevalence {min(prev):.2f}-{max(prev):.2f} ({kept})")
 
 
 if __name__ == "__main__":
@@ -101,6 +114,5 @@ if __name__ == "__main__":
     ap.add_argument("--round-outbreaks", type=int, default=5)
     ap.add_argument("--free-outbreaks", type=int, default=5)
     ap.add_argument("--calib-outbreaks", type=int, default=20)
-    ap.add_argument("--seed", type=int, default=20261112)
     args = ap.parse_args()
-    build(args.out, args.round_outbreaks, args.free_outbreaks, args.calib_outbreaks, args.seed)
+    build(args.out, args.round_outbreaks, args.free_outbreaks, args.calib_outbreaks)
