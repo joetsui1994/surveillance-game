@@ -56,7 +56,16 @@ Both live scripts refuse to run while a round is open (add `-- --force` to close
 | `npm run test:sql` | Database schema checks (local Postgres) |
 | `npm run smoke` / `npm run loadtest` | Checks against the real Supabase project (see Multiplayer) |
 | `npm run bench` | Speed benchmark |
-| `npm run data` | Rebuild presets → calibrate prior → rebuild bots (run all three after changing presets) |
+| `npm run data` | Rebuild presets → calibrate prior → rebuild bots (run all three after changing networks or outbreaks) |
+| `npm run data:layout -- <id> [--pick N]` | Search layouts for a network; writes a contact sheet to `offline/out/layouts/<id>.png`, `--pick N` saves candidate N |
 | `npm run validate` | Laplace vs MCMC report → `docs/validation/` |
+
+## Networks and layouts
+
+Networks are defined in `offline/networks.py`: the 10×10 grid, a hub network (`ba40`) and two three-town networks (`sbm45hi`, `sbm45lo`). Graphs come from fixed seeds. Non-grid layouts are files in `offline/layouts/<id>.json` (positions plus the edges they were made for), so rebuilding data never moves a node.
+
+1. `npm run data:layout -- <id>`, look at the contact sheet, then `npm run data:layout -- <id> --pick N`.
+2. Optional: `npm run dev`, open `#/layout`, drag nodes (faults show in red), **Save**. The editor exists only in dev builds.
+3. `npm run data:presets` to apply a layout change (layouts don't affect priors or bots), or `npm run data` after changing a network or its outbreaks.
 
 Python steps use `uv` (`offline/pyproject.toml`) and expect the paper repo at `../optimal-disease-surveillance-AL` (override with `SURVEILLANCE_REPO`).
