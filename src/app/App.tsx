@@ -88,11 +88,11 @@ export function App({ api = null }: AppProps) {
   if (error) return <main className="message">Could not load the game: {error}</main>;
   if (!data) return <main className="message">Loading…</main>;
 
-  const begin = (presetId: string, previousId: string | null) => {
+  const begin = (presetId: string, previousId: string | null, budget: number) => {
     const preset = data.presets.presets.find((p) => p.id === presetId)!;
     const outbreak = chooseOutbreak(preset, previousId);
     saveLastOutbreak(outbreak.id);
-    setSession(startSession(preset, outbreak));
+    setSession(startSession(preset, outbreak, budget));
   };
   const remember = (name: string) => {
     setNickname(name);
@@ -115,9 +115,9 @@ export function App({ api = null }: AppProps) {
       <StartScreen
         presets={data.presets.presets}
         initialNickname={nickname}
-        onStart={(name, presetId) => {
+        onStart={(name, presetId, budget) => {
           remember(name);
-          begin(presetId, loadLastOutbreak());
+          begin(presetId, loadLastOutbreak(), budget);
         }}
         {...(api && {
           round: joinable,
@@ -178,7 +178,7 @@ export function App({ api = null }: AppProps) {
       banner={banner(view.banner)}
       actions={
         <>
-          <button className="primary" onClick={() => begin(session.presetId, session.outbreakId)}>Play another outbreak</button>
+          <button className="primary" onClick={() => begin(session.presetId, session.outbreakId, session.budget)}>Play another outbreak</button>
           <button onClick={backToLobby}>{api ? 'Back to the lobby' : 'Change network or nickname'}</button>
         </>
       }

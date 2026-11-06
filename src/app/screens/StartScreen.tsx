@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { Preset } from '../../core/presets.ts';
 import type { Round } from '../net/types.ts';
+import { PRACTICE_LEVELS, practiceBudget, type PracticeLevel } from '../session.ts';
 
 export interface StartScreenProps {
   presets: Preset[];
   initialNickname: string;
-  onStart: (nickname: string, presetId: string) => void;
+  onStart: (nickname: string, presetId: string, budget: number) => void;
   /** Multiplayer: a round the player can join now. */
   round?: Round | null;
   onJoin?: (nickname: string) => void;
@@ -16,7 +17,9 @@ export interface StartScreenProps {
 export function StartScreen({ presets, initialNickname, onStart, round = null, onJoin, status }: StartScreenProps) {
   const [nickname, setNickname] = useState(initialNickname);
   const [presetId, setPresetId] = useState(presets[0]?.id ?? '');
+  const [level, setLevel] = useState<PracticeLevel>('Standard');
   const preset = presets.find((p) => p.id === presetId);
+  const budget = preset ? practiceBudget(preset, level) : null;
   const name = nickname.trim();
   const multiplayer = onJoin !== undefined;
   return (
@@ -26,12 +29,12 @@ export function StartScreen({ presets, initialNickname, onStart, round = null, o
         e.preventDefault();
         if (name === '') return;
         if (round && onJoin) onJoin(name);
-        else if (preset) onStart(name, presetId);
+        else if (preset && budget) onStart(name, presetId, budget);
       }}
     >
       <h1>Surveillance Game</h1>
       <p className="lead">
-        An outbreak is spreading across a network of locations. You have <b>{preset?.defaultBudget ?? 'a few'} tests</b>. One
+        An outbreak is spreading across a network of locations. You have <b>{budget ?? 'a few'} tests</b>. One
         starting location is already tested. Choose where to test next, and a model maps the rest. Your score is the model's
         AUC on the locations you didn't test.
       </p>
@@ -53,12 +56,21 @@ export function StartScreen({ presets, initialNickname, onStart, round = null, o
         {presets.map((p) => (
           <button key={p.id} type="button" role="radio" aria-checked={p.id === presetId} className={`preset-card${p.id === presetId ? ' selected' : ''}`} onClick={() => setPresetId(p.id)}>
             <b>{p.name}</b>
-            <span className="muted">{p.n} locations · {p.defaultBudget} tests</span>
+            <span className="muted">{p.n} locations</span>
           </button>
         ))}
       </div>
+      {preset && (
+        <div className="budget-choice" role="radiogroup" aria-label="Tests">
+          {PRACTICE_LEVELS.map((l) => (
+            <button key={l} type="button" role="radio" aria-checked={l === level} className={l === level ? 'selected' : ''} onClick={() => setLevel(l)}>
+              {l} · {practiceBudget(preset, l)} tests
+            </button>
+          ))}
+        </div>
+      )}
       {multiplayer ? (
-        <button type="button" className={round ? '' : 'primary'} disabled={name === '' || !preset} onClick={() => preset && onStart(name, presetId)}>
+        <button type="button" className={round ? '' : 'primary'} disabled={name === '' || !preset} onClick={() => preset && budget && onStart(name, presetId, budget)}>
           Play a practice game
         </button>
       ) : (

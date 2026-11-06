@@ -17,6 +17,17 @@ export interface Session {
   roundId: number | null;
 }
 
+export const PRACTICE_LEVELS = ['Few', 'Standard', 'Many'] as const;
+export type PracticeLevel = (typeof PRACTICE_LEVELS)[number];
+
+/** Practice-game budgets: half the default, the default, and double it (capped at the maximum). */
+export function practiceBudget(preset: Preset, level: PracticeLevel): number {
+  const d = preset.defaultBudget;
+  if (level === 'Few') return Math.max(1, Math.round(d / 2));
+  if (level === 'Many') return Math.min(preset.maxBudget, 2 * d);
+  return d;
+}
+
 export function startSession(preset: Preset, outbreak: Outbreak, budget = preset.defaultBudget, roundId: number | null = null): Session {
   if (!(Number.isInteger(budget) && budget >= 1 && budget <= preset.maxBudget))
     throw new Error(`startSession: budget must be an integer in 1..${preset.maxBudget}`);

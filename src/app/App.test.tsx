@@ -31,6 +31,17 @@ describe('App', () => {
     expect(screen.getByTestId('verdict').textContent).toMatch(/On this outbreak you finished|undefined/);
   });
 
+  it('starts a practice game with the chosen number of tests, and keeps it for the next outbreak', async () => {
+    render(<App />);
+    fireEvent.change(await screen.findByPlaceholderText('e.g. ada'), { target: { value: 'ada' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Many · 20 tests' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(screen.getByTestId('tests-left').textContent).toBe('20 / 20');
+    playToEnd();
+    fireEvent.click(screen.getByRole('button', { name: 'Play another outbreak' }));
+    expect(screen.getByTestId('tests-left').textContent).toBe('20 / 20');
+  });
+
   it('counts every click even when several land before a re-render, and ignores repeats', async () => {
     render(<App />);
     fireEvent.change(await screen.findByPlaceholderText('e.g. ada'), { target: { value: 'ada' } });

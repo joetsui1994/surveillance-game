@@ -4,7 +4,7 @@ import { parsePresetFile, presetModel } from '../core/presets.ts';
 import { replay } from '../core/replay.ts';
 import { scenarioFor } from '../core/presets.ts';
 import {
-  deserializeSession, isFinished, isTested, isValidFor, noteToggles, observations, pick, scoreSession,
+  deserializeSession, isFinished, isTested, isValidFor, noteToggles, observations, pick, practiceBudget, scoreSession,
   serializeSession, startSession, testsLeft,
 } from './session.ts';
 
@@ -25,6 +25,17 @@ describe('session', () => {
     expect(startSession(preset, outbreak).budget).toBe(preset.defaultBudget);
     expect(() => startSession(preset, outbreak, 0)).toThrow(/budget/);
     expect(() => startSession(preset, outbreak, preset.maxBudget + 1)).toThrow(/budget/);
+  });
+
+  it('offers half, the default and double the default for practice, capped at the maximum', () => {
+    const at = (defaultBudget: number, maxBudget: number) => {
+      const p = { ...preset, defaultBudget, maxBudget };
+      return (['Few', 'Standard', 'Many'] as const).map((l) => practiceBudget(p, l));
+    };
+    expect(at(10, 30)).toEqual([5, 10, 20]);
+    expect(at(6, 14)).toEqual([3, 6, 12]);
+    expect(at(6, 10)).toEqual([3, 6, 10]);
+    expect(at(1, 2)).toEqual([1, 1, 2]);
   });
 
   it('records picks immutably and finishes when the budget is spent', () => {
