@@ -16,9 +16,9 @@ describe('shipped networks', () => {
   });
 
   describe.each(presets.map((p) => [p.id, p] as const))('%s', (_, preset) => {
-    it('has 5 round, 5 free and 20 calib outbreaks', () => {
+    it('has 5 round, 20 free and 20 calib outbreaks', () => {
       const count = (split: string) => preset.outbreaks.filter((o) => o.split === split).length;
-      expect([count('round'), count('free'), count('calib')]).toEqual([5, 5, 20]);
+      expect([count('round'), count('free'), count('calib')]).toEqual([5, 20, 20]);
     });
 
     it('has every bot for every played outbreak', () => {

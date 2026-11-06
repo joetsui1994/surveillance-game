@@ -19,9 +19,9 @@ describe('chooseOutbreak', () => {
     }
   });
 
-  it('presets.json has 5 round and 5 free outbreaks, and bots cover all of them', () => {
+  it('presets.json has 5 round and 20 free outbreaks, and bots cover all of them', () => {
     expect(preset.outbreaks.filter((o) => o.split === 'round')).toHaveLength(5);
-    expect(preset.outbreaks.filter((o) => o.split === 'free')).toHaveLength(5);
+    expect(preset.outbreaks.filter((o) => o.split === 'free')).toHaveLength(20);
     for (const o of preset.outbreaks.filter((o) => o.split !== 'calib')) expect(() => botResult(bots, preset.id, o.id, 'LE')).not.toThrow();
   });
 });

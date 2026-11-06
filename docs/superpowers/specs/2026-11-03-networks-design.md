@@ -153,7 +153,7 @@ Positions don't enter the model. So a layout can change at any time without chan
 - **Vitest:**
   - `public/data/presets.json` parses;
   - it has the four ids;
-  - each one has 5/5/20 outbreaks;
+  - each one has 5/20/20 outbreaks (round/free/calib; 15 free outbreaks were appended after calib on 2026-11-06);
   - `bots.json` has every policy for each `round`/`free` outbreak of each network;
   - layout coordinates are in [0, 1];
   - no overlapping nodes or nodes on edges (`layoutFaults`);

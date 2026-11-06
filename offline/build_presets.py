@@ -28,14 +28,18 @@ def budgets(n):
     return max(6, round(0.1 * n)), round(0.3 * n)
 
 
-def split_for(k, round_count, free_count):
-    """Outbreak k's role: presenter-led rounds first, then free play, then prior calibration."""
+def split_for(k, round_count, free_count, calib_count):
+    """Outbreak k's role: presenter-led rounds first, then free play, then prior calibration, then more free play.
+
+    The extra free-play outbreaks come last so that adding them leaves every earlier outbreak unchanged."""
     if k < round_count:
         return "round"
-    return "free" if k < round_count + free_count else "calib"
+    if k < round_count + free_count:
+        return "free"
+    return "calib" if k < round_count + free_count + calib_count else "free"
 
 
-def simulate_outbreaks(g, params, count, round_count, free_count, seed, prevalence_range=(0.25, 0.5), max_tries=10_000):
+def simulate_outbreaks(g, params, count, round_count, free_count, calib_count, seed, prevalence_range=(0.25, 0.5), max_tries=10_000):
     """Simulate `count` distinct outbreaks, labelled by split_for (round, free, then calib)."""
     n = g.number_of_nodes()
     rng = np.random.default_rng(seed)
@@ -53,7 +57,7 @@ def simulate_outbreaks(g, params, count, round_count, free_count, seed, prevalen
             continue
         outbreaks.append({
             "id": f"ob{len(outbreaks):02d}",
-            "split": split_for(len(outbreaks), round_count, free_count),
+            "split": split_for(len(outbreaks), round_count, free_count, calib_count),
             "truth": truth,
             "seedNode": int(rng.integers(0, n)),
             "prevalence": round(prevalence, 4),
@@ -70,7 +74,7 @@ def previous_priors(out_path):
     return {p["id"]: p for p in json.loads(out_path.read_text())["presets"]}
 
 
-def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
+def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks, extra_free_outbreaks):
     previous = previous_priors(out_path)
     presets = []
     calibrated = {}  # id -> prior carried over from the previous file and not the default
@@ -85,10 +89,12 @@ def build(out_path, round_outbreaks, free_outbreaks, calib_outbreaks):
         if pen["close"] or pen["onEdge"]:
             raise SystemExit(f"{pid}: layout has {pen['close']} close node pairs and {pen['onEdge']} nodes on edges; fix it in #/layout")
         default_budget, max_budget = budgets(n)
-        outbreaks = simulate_outbreaks(g, net.sim, round_outbreaks + free_outbreaks + calib_outbreaks, round_outbreaks, free_outbreaks, net.seed)
-        # Keep a calibrated prior while the graph and outbreaks are unchanged (e.g. after a layout edit).
+        count = round_outbreaks + free_outbreaks + calib_outbreaks + extra_free_outbreaks
+        outbreaks = simulate_outbreaks(g, net.sim, count, round_outbreaks, free_outbreaks, calib_outbreaks, net.seed)
+        # Keep a calibrated prior while the graph and calibration outbreaks are unchanged (e.g. after a layout edit).
         old = previous.get(pid)
-        carried = bool(old) and old["edges"] == edges and old["outbreaks"] == outbreaks
+        calib = lambda obs: [o for o in obs if o["split"] == "calib"]
+        carried = bool(old) and old["edges"] == edges and calib(old["outbreaks"]) == calib(outbreaks)
         prior = old["prior"] if carried else DEFAULT_PRIOR
         calibrated[pid] = carried and prior != DEFAULT_PRIOR
         presets.append({
@@ -117,5 +123,6 @@ if __name__ == "__main__":
     ap.add_argument("--round-outbreaks", type=int, default=5)
     ap.add_argument("--free-outbreaks", type=int, default=5)
     ap.add_argument("--calib-outbreaks", type=int, default=20)
+    ap.add_argument("--extra-free-outbreaks", type=int, default=15)
     args = ap.parse_args()
-    build(args.out, args.round_outbreaks, args.free_outbreaks, args.calib_outbreaks)
+    build(args.out, args.round_outbreaks, args.free_outbreaks, args.calib_outbreaks, args.extra_free_outbreaks)
