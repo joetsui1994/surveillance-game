@@ -5,7 +5,6 @@ import { AucChart, type ChartSeries } from '../components/AucChart.tsx';
 import { GraphView } from '../components/GraphView.tsx';
 import { botResult } from '../data.ts';
 import { scoreSession, type Session } from '../session.ts';
-import { verdictText } from '../verdict.ts';
 
 export interface ResultsScreenProps {
   model: PresetModel;
@@ -14,7 +13,7 @@ export interface ResultsScreenProps {
   bots: BotsFile;
   /** Header title; defaults to "Results". */
   title?: string;
-  /** Compare with the bots (chart lines and verdict). Off while a round is still open. */
+  /** Compare with the bots (chart lines). Off while a round is still open. */
   showComparison?: boolean;
   /** Shown above the scores, e.g. the player's rank or "waiting for the presenter". */
   notice?: ReactNode;
@@ -23,12 +22,14 @@ export interface ResultsScreenProps {
   actions: ReactNode;
 }
 
-// Validated categorical pair for the bots (dataviz palette check: CVD, normal vision, contrast);
-// "You" is ink, Random a neutral reference. None reuse the graph's red/blue/orange.
+// Validated categorical colours for the bots (dataviz palette check: CVD, normal vision, contrast), the
+// same as on the board; "You" is ink, Random a neutral reference.
 const SERIES_STYLE = {
   you: { color: '#0b0b0b', width: 3 },
   le: { color: '#008300', width: 2 },
   ne: { color: '#6250d6', width: 2 },
+  bald: { color: '#2a8fd4', width: 2 },
+  dc: { color: '#cc3d6e', width: 2 },
   rand: { color: '#8a8984', width: 1.5, dash: '4 3' },
 };
 
@@ -46,22 +47,20 @@ export function ResultsScreen({ model, outbreak, session, bots, title = 'Results
   const upTo = session.budget + 1;
   const le = botResult(bots, preset.id, outbreak.id, 'LE').auc.mean.slice(0, upTo);
   const ne = botResult(bots, preset.id, outbreak.id, 'NE').auc.mean.slice(0, upTo);
+  const bald = botResult(bots, preset.id, outbreak.id, 'BALD').auc.mean.slice(0, upTo);
+  const dc = botResult(bots, preset.id, outbreak.id, 'DC').auc.mean.slice(0, upTo);
   const rand = botResult(bots, preset.id, outbreak.id, 'RAND').auc;
   const you: ChartSeries = { key: 'you', name: 'You', short: 'You', values: score.trajectory.auc, ...SERIES_STYLE.you };
   const series: ChartSeries[] = showComparison
     ? [
         { key: 'rand', name: 'Random: average, and range of 90% of runs', short: 'Random', values: rand.mean.slice(0, upTo), ...SERIES_STYLE.rand },
+        { key: 'dc', name: 'DC (degree, mean)', short: 'DC', values: dc, ...SERIES_STYLE.dc },
+        { key: 'bald', name: 'BALD', short: 'BALD', values: bald, ...SERIES_STYLE.bald },
         { key: 'ne', name: 'NE', short: 'NE', values: ne, ...SERIES_STYLE.ne },
         { key: 'le', name: 'LE', short: 'LE', values: le, ...SERIES_STYLE.le },
         you,
       ]
     : [you];
-
-  const verdict = verdictText(score.auc, [
-    { name: 'LE', auc: le[session.budget] ?? null },
-    { name: 'NE', auc: ne[session.budget] ?? null },
-    { name: 'Random', auc: rand.mean[session.budget] ?? null },
-  ]);
 
   return (
     <main className="results">
@@ -92,7 +91,6 @@ export function ResultsScreen({ model, outbreak, session, bots, title = 'Results
             </div>
           </div>
           <AucChart series={series} band={showComparison ? { lo: rand.lo.slice(0, upTo), hi: rand.hi.slice(0, upTo), color: SERIES_STYLE.rand.color } : undefined} />
-          {showComparison && <p className="verdict" data-testid="verdict">{verdict}</p>}
           <div className="actions">{actions}</div>
         </div>
       </div>

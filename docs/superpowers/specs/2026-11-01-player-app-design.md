@@ -115,7 +115,7 @@ Layout: a header bar, the graph on the left, and a side panel on the right.
   - **Legend:** a row above the plot, always present.
   - **Direct labels:** at the right-hand ends of the lines, outside the plot, with leader lines. Labels are nudged at least 14 px apart and kept inside the plot height.
   - **Hover:** a crosshair, with a tooltip listing every series at that step. The tooltip flips side past 55% of the width.
-- **Verdict line:** for example, "On this outbreak you finished above LE (0.937), NE (0.966) and Random (0.951)".
+- ~~**Verdict line**~~: removed on 2026-11-10 at the user's request; the chart now also shows BALD and DC (degree).
 - **Button:** "Play another outbreak".
 
 **Bots used here:** precomputed curves from `bots.json` for the same preset and outbreak, truncated to the player's budget.

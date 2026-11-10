@@ -52,7 +52,7 @@ describe('player in a presenter-led round', () => {
     await close();
     expect(screen.getByTestId('round-notice').textContent).toMatch(/^#[12] of 2 · ranked by AUC$/);
     expect(within(screen.getByTestId('legend')).getByText('LE')).toBeTruthy();
-    expect(screen.getByTestId('verdict')).toBeTruthy();
+    expect(within(screen.getByTestId('legend')).getByText('DC (degree, mean)')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to the lobby' }));
     expect(screen.getByTestId('lobby-status').textContent).toMatch(/Waiting for the presenter/);

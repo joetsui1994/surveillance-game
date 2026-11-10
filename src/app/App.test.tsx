@@ -27,8 +27,8 @@ describe('App', () => {
     expect(screen.getByText('AUC')).toBeTruthy();
     expect(screen.getByTestId('score-auc').textContent).toMatch(/^0\.\d{3}$|^–$/);
     const legend = screen.getByTestId('legend');
-    for (const name of ['You', 'LE', 'NE', 'Random: average, and range of 90% of runs']) expect(within(legend).getByText(name)).toBeTruthy();
-    expect(screen.getByTestId('verdict').textContent).toMatch(/On this outbreak you finished|undefined/);
+    for (const name of ['You', 'LE', 'NE', 'BALD', 'DC (degree, mean)', 'Random: average, and range of 90% of runs']) expect(within(legend).getByText(name)).toBeTruthy();
+    expect(screen.queryByTestId('verdict')).toBeNull();
   });
 
   it('starts a practice game with the chosen number of tests, and keeps it for the next outbreak', async () => {
