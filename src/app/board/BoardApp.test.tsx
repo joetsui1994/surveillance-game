@@ -136,6 +136,29 @@ describe('BoardApp', () => {
     return drawer;
   };
 
+  it('a round closed with nobody playing still shows results, bots, hover and replay', async () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 460, height: 240 } as DOMRect);
+    render(<BoardApp api={api} />);
+    await screen.findByTestId('qr');
+    const drawer = await unlock();
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Open round 1' })));
+    await act(async () => fireEvent.click(within(drawer).getByRole('button', { name: 'Close round 1' })));
+    expect(screen.getByText('Room median (0 players)')).toBeTruthy();
+    const hover = () => fireEvent.mouseMove([...document.querySelectorAll('.chart rect[fill="transparent"]')].at(-1)!, { clientX: 200 });
+    hover();
+    expect(screen.getByText(/Room: –/)).toBeTruthy();
+    fireEvent.click(within(drawer).getByLabelText('Reveal bots'));
+    hover();
+    expect(within(screen.getByTestId('leaderboard')).getByText('DC (degree, mean)')).toBeTruthy();
+    fireEvent.click(within(screen.getByTestId('leaderboard')).getByText('LE'));
+    expect(screen.getByTestId('replay-step').textContent).toBe(`Test 0 of ${preset.defaultBudget}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Last' }));
+    fireEvent.click(screen.getByRole('button', { name: '← Back to results' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to lobby' }));
+    expect(screen.getByTestId('qr')).toBeTruthy();
+    vi.restoreAllMocks();
+  });
+
   it('keeps the drawer settings while it is hidden', async () => {
     render(<BoardApp api={api} />);
     await screen.findByTestId('qr');

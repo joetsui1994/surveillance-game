@@ -142,7 +142,7 @@ export function AucChart({
             {[...series].reverse().map((s) => (
               <div key={s.key}>
                 <span className="swatch" style={{ background: s.color }} />
-                {s.short}: {s.values[hoverT] === null ? '–' : s.values[hoverT]!.toFixed(3)}
+                {s.short}: {s.values[hoverT] == null ? '–' : s.values[hoverT]!.toFixed(3)}
               </div>
             ))}
           </div>
