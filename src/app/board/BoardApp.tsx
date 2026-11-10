@@ -228,6 +228,8 @@ function Results({ round, model, outbreak, rows, le, showBots, selected, onSelec
     ...(showBots
       ? [
           { key: 'rand', name: 'Random (mean)', short: 'Random', color: '#8a8984', width: 1.5, dash: '4 3', values: bot('bot-RAND')?.curve ?? [] },
+          { key: 'dc', name: 'DC (degree, mean)', short: 'DC', color: '#cc3d6e', width: 2, values: bot('bot-DC')?.curve ?? [] },
+          { key: 'bald', name: 'BALD', short: 'BALD', color: '#2a8fd4', width: 2, values: bot('bot-BALD')?.curve ?? [] },
           { key: 'ne', name: 'NE', short: 'NE', color: '#6250d6', width: 2, values: bot('bot-NE')?.curve ?? [] },
           { key: 'le', name: 'LE', short: 'LE', color: '#008300', width: 2, values: bot('bot-LE')?.curve ?? [] },
         ]

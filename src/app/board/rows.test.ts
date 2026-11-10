@@ -28,17 +28,20 @@ describe('leaderboardRows', () => {
 
   it('places revealed bots by value without giving them ranks', () => {
     const rows = leaderboardRows(model, outbreak, round, plays, bots, true);
-    expect(rows).toHaveLength(6);
-    expect(rows.filter((r) => r.bot).map((r) => r.rank)).toEqual([null, null, null]);
+    expect(rows).toHaveLength(8);
+    expect(rows.filter((r) => r.bot).map((r) => r.key).sort()).toEqual(['bot-BALD', 'bot-DC', 'bot-LE', 'bot-NE', 'bot-RAND']);
+    expect(rows.filter((r) => r.bot).map((r) => r.rank)).toEqual([null, null, null, null, null]);
     const values = rows.map((r) => r.auc ?? -1);
     expect([...values].sort((a, b) => b - a)).toEqual(values);
   });
 
-  it('bot rows use the round budget; LE and NE are replayable, Random is not', () => {
-    const [le, ne, rand] = botRows(bots, preset.id, outbreak.id, 4);
+  it('bot rows use the round budget; LE, NE and BALD are replayable, DC and Random are not', () => {
+    const [le, ne, bald, dc, rand] = botRows(bots, preset.id, outbreak.id, 4);
     expect(le.curve).toHaveLength(5);
     expect(le.picks).toHaveLength(4);
     expect(ne.picks).toHaveLength(4);
+    expect(bald.picks).toHaveLength(4);
+    expect(dc.picks).toBeNull();
     expect(rand.picks).toBeNull();
     expect(le.auc).toBe(le.curve[4]);
   });

@@ -15,7 +15,7 @@ export interface Row extends Scores {
   rank: number | null;
   /** AUC after each test, 0..budget. */
   curve: (number | null)[];
-  /** Picks to replay; null for Random (a 200-run average). */
+  /** Picks to replay; null for Random and DC (200-run averages). */
   picks: number[] | null;
   play: Play | null;
 }
@@ -23,6 +23,8 @@ export interface Row extends Scores {
 const BOTS: { policy: PolicyName; name: string }[] = [
   { policy: 'LE', name: 'LE' },
   { policy: 'NE', name: 'NE' },
+  { policy: 'BALD', name: 'BALD' },
+  { policy: 'DC', name: 'DC (degree, mean)' },
   { policy: 'RAND', name: 'Random (mean)' },
 ];
 

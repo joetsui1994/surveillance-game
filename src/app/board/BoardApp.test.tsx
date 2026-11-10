@@ -93,6 +93,8 @@ describe('BoardApp', () => {
     fireEvent.click(within(drawer).getByLabelText('Reveal bots'));
     expect(within(screen.getByTestId('leaderboard')).getByText('LE')).toBeTruthy();
     expect(within(screen.getByTestId('leaderboard')).getByText('Random (mean)')).toBeTruthy();
+    expect(within(screen.getByTestId('leaderboard')).getByText('BALD')).toBeTruthy();
+    expect(within(screen.getByTestId('leaderboard')).getByText('DC (degree, mean)')).toBeTruthy();
     expect(within(screen.getByTestId('row-bot-LE')).getByText('bot')).toBeTruthy();
 
     // Replay ada's game.
